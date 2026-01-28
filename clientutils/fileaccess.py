@@ -10,17 +10,18 @@ Provides REST endpoints for:
 - Browsing file directories
 """
 
+from datetime import datetime
 import logging
 import mimetypes
+from pathlib import Path
 import platform
 import subprocess
-from datetime import datetime
-from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from fastapi import HTTPException, Query
 from fastapi.responses import FileResponse, HTMLResponse, Response
-from jinja2 import Environment, FileSystemLoader, Template
+
+
 
 logger = logging.getLogger(__name__)
 
@@ -28,80 +29,94 @@ logger = logging.getLogger(__name__)
 class FileAccessResource:
     """Handles file access operations via REST endpoints"""
 
-    # Simple inline templates (can be moved to external files)
-    DEFAULT_INFO_TEMPLATE = """
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>File Info: {{ fileinfo.name }}</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .container { max-width: 800px; margin: 0 auto; }
-        .header { background: #f0f0f0; padding: 10px; border-radius: 5px; }
-        .info-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        .info-table td { padding: 8px; border-bottom: 1px solid #ddd; }
-        .info-table td:first-child { font-weight: bold; width: 200px; }
-        .actions { margin-top: 20px; }
-        .btn { display: inline-block; padding: 10px 20px; margin: 5px;
-               background: #007bff; color: white; text-decoration: none;
-               border-radius: 3px; }
-        .btn:hover { background: #0056b3; }
-        .icon { width: 32px; height: 32px; vertical-align: middle; margin-right: 10px; }
-    </style>
-</head>
-<body>
-{% if not noheader %}
-<div class="container">
-    <div class="header">
-        <h1>File Information</h1>
-    </div>
-{% endif %}
-    <table class="info-table">
-        <tr>
-            <td>Name:</td>
-            <td><img src="{{ baseurl }}fileicon/{{ openiconName }}" class="icon" alt="icon">{{ fileinfo.name }}</td>
-        </tr>
-        <tr>
-            <td>Path:</td>
-            <td>{{ fileinfo.path }}</td>
-        </tr>
-        <tr>
-            <td>Size:</td>
-            <td>{{ fileinfo.size_formatted }}</td>
-        </tr>
-        <tr>
-            <td>Modified:</td>
-            <td>{{ fileinfo.modified }}</td>
-        </tr>
-        <tr>
-            <td>Type:</td>
-            <td>{{ fileinfo.type }}</td>
-        </tr>
-    </table>
+    @staticmethod
+    def _render_default_info(fileinfo: Dict[str, Any], baseurl: str,
+                              openiconName: str, downloadlink: str,
+                              browselink: str, openlink: str, noheader: bool) -> str:
+        """Render default info template using f-strings."""
 
-    <div class="actions">
-        <h3>Actions:</h3>
-        <a href="{{ downloadlink }}" class="btn">Download</a>
-        <a href="{{ browselink }}" class="btn">Browse Folder</a>
-        <a href="{{ openlink }}" class="btn">Open File</a>
-    </div>
-{% if not noheader %}
-</div>
-{% endif %}
-</body>
-</html>
-"""
+        icon_html = f'<img src="{baseurl}fileicon/{openiconName}" class="icon" alt="icon">'
 
-    SHORT_INFO_TEMPLATE = """
-<div style="padding: 10px; border: 1px solid #ccc; border-radius: 5px; background: #f9f9f9;">
-    <strong>{{ fileinfo.name }}</strong><br>
-    Size: {{ fileinfo.size_formatted }}<br>
-    <a href="{{ downloadlink }}">Download</a> |
-    <a href="{{ browselink }}">Browse</a> |
-    <a href="{{ openlink }}">Open</a>
-</div>
-"""
+        table_content = f"""
+        <table class="info-table">
+            <tr>
+                <td>Name:</td>
+                <td>{icon_html}{fileinfo['name']}</td>
+            </tr>
+            <tr>
+                <td>Path:</td>
+                <td>{fileinfo['path']}</td>
+            </tr>
+            <tr>
+                <td>Size:</td>
+                <td>{fileinfo['size_formatted']}</td>
+            </tr>
+            <tr>
+                <td>Modified:</td>
+                <td>{fileinfo['modified']}</td>
+            </tr>
+            <tr>
+                <td>Type:</td>
+                <td>{fileinfo['type']}</td>
+            </tr>
+        </table>
+
+        <div class="actions">
+            <h3>Actions:</h3>
+            <a href="{downloadlink}" class="btn">Download</a>
+            <a href="{browselink}" class="btn">Browse Folder</a>
+            <a href="{openlink}" class="btn">Open File</a>
+        </div>
+        """
+
+        if noheader:
+            return table_content
+
+        return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>File Info: {fileinfo['name']}</title>
+        <style>
+            body {{ font-family: Arial, sans-serif; margin: 20px; }}
+            .container {{ max-width: 800px; margin: 0 auto; }}
+            .header {{ background: #f0f0f0; padding: 10px; border-radius: 5px; }}
+            .info-table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
+            .info-table td {{ padding: 8px; border-bottom: 1px solid #ddd; }}
+            .info-table td:first-child {{ font-weight: bold; width: 200px; }}
+            .actions {{ margin-top: 20px; }}
+            .btn {{ display: inline-block; padding: 10px 20px; margin: 5px;
+                   background: #007bff; color: white; text-decoration: none;
+                   border-radius: 3px; }}
+            .btn:hover {{ background: #0056b3; }}
+            .icon {{ width: 32px; height: 32px; vertical-align: middle; margin-right: 10px; }}
+        </style>
+    </head>
+    <body>
+    <div class="container">
+        <div class="header">
+            <h1>File Information</h1>
+        </div>
+        {table_content}
+    </div>
+    </body>
+    </html>
+    """
+
+    @staticmethod
+    def _render_short_info(fileinfo: Dict[str, Any], downloadlink: str,
+                           browselink: str, openlink: str) -> str:
+        """Render short info template using f-strings."""
+        return f"""
+    <div style="padding: 10px; border: 1px solid #ccc; border-radius: 5px; background: #f9f9f9;">
+        <strong>{fileinfo['name']}</strong><br>
+        Size: {fileinfo['size_formatted']}<br>
+        <a href="{downloadlink}">Download</a> |
+        <a href="{browselink}">Browse</a> |
+        <a href="{openlink}">Open</a>
+    </div>
+    """
 
     CLOSE_TAB_HTML = """
 <!DOCTYPE html>
@@ -128,13 +143,6 @@ class FileAccessResource:
             base_url: Base URL for the server
         """
         self.base_url = base_url.rstrip("/") + "/"
-
-        # Initialize Jinja2 environment for template rendering
-        self.jinja_env = Environment()
-
-        # Pre-compile templates
-        self.default_info_tpl = self.jinja_env.from_string(self.DEFAULT_INFO_TEMPLATE)
-        self.short_info_tpl = self.jinja_env.from_string(self.SHORT_INFO_TEMPLATE)
 
         # Initialize mimetypes
         mimetypes.init()
@@ -234,20 +242,19 @@ class FileAccessResource:
         """
         file_path = Path(fileinfo["path"])
 
-        context = {
-            "baseurl": self.base_url,
-            "fileinfo": fileinfo,
-            "noheader": noheader,
-            "openiconName": self.get_icon_name(file_path),
-            "downloadlink": self.get_action_link(fileinfo["path"], "download"),
-            "browselink": self.get_action_link(fileinfo["path"], "browse"),
-            "openlink": self.get_action_link(fileinfo["path"], "open"),
-        }
+        # Prepare common context
+        baseurl = self.base_url
+        openiconName = self.get_icon_name(file_path)
+        downloadlink = self.get_action_link(fileinfo["path"], "download")
+        browselink = self.get_action_link(fileinfo["path"], "browse")
+        openlink = self.get_action_link(fileinfo["path"], "open")
 
         if template_name == "shortinfo":
-            return self.short_info_tpl.render(**context)
+            return self._render_short_info(fileinfo, downloadlink, browselink, openlink)
         else:
-            return self.default_info_tpl.render(**context)
+            return self._render_default_info(
+                fileinfo, baseurl, openiconName, downloadlink, browselink, openlink, noheader
+            )
 
     def open_file_in_desktop(self, file_path: Path, open_parent: bool = False) -> bool:
         """

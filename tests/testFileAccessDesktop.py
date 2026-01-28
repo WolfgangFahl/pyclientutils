@@ -3,14 +3,15 @@ Created on 2026-01-28
 
 @author: wf
 """
+
 import subprocess
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from fastapi.testclient import TestClient
 from basemkit.basetest import Basetest
 from fastapi.applications import FastAPI
+from fastapi.testclient import TestClient
 
 from clientutils.fileaccess import FileAccessResource, add_file_routes
 
@@ -50,8 +51,21 @@ class TestFileAccessDesktopIntegration(Basetest):
     def _assert_subprocess_called_with_path(self, expected_path):
         """Helper to assert subprocess was called with expected path"""
         self.mock_run.assert_called_once()
-        call_args = str(self.mock_run.call_args)
-        self.assertIn(str(expected_path), call_args)
+
+        # Get the actual arguments passed to subprocess.run
+        args, kwargs = self.mock_run.call_args
+
+        # The command should be the first positional argument (a list like ['explorer', 'path'])
+        command = args[0]
+
+        # The path should be the last element in the command list
+        actual_path = command[-1] if isinstance(command, list) else str(command)
+
+        # Normalize both paths for comparison to handle any path differences
+        expected_path_normalized = str(Path(expected_path).resolve())
+        actual_path_normalized = str(Path(actual_path).resolve())
+
+        self.assertEqual(expected_path_normalized, actual_path_normalized)
 
     def test_open_file_in_desktop(self):
         """Test opening file in desktop application"""
