@@ -19,7 +19,7 @@ class TestClipboard(Basetest):
 
     def setUp(self, debug=True, profile=True):
         Basetest.setUp(self, debug=debug, profile=profile)
-        Clipboard.debug=debug
+        Clipboard.debug = debug
         # Store original clipboard content
         try:
             self._original_clipboard = Clipboard.paste_text()
@@ -35,6 +35,13 @@ class TestClipboard(Basetest):
                 pass
         Basetest.tearDown(self)
 
+    def _get_test_image(self, color="cyan", size=(100, 100)):
+        """
+        Helper to create uniform test images.
+        Defaults to cyan to match your specific testing preference.
+        """
+        return Image.new("RGB", size, color=color)
+
     def test_copy_paste_text(self):
         """Test text copy and paste"""
         test_text = "The kitten says meow"
@@ -44,8 +51,8 @@ class TestClipboard(Basetest):
 
     def test_copy_paste_image(self):
         """Test image copy and paste"""
-        # Create a test image
-        test_image = Image.new("RGB", (100, 100), color="red")
+        # Uses helper with custom color to differentiate test from others
+        test_image = self._get_test_image(color="red")
 
         # Copy to clipboard
         Clipboard.copy_image(test_image)
@@ -66,7 +73,7 @@ class TestClipboard(Basetest):
 
     def test_image_mode_conversion(self):
         """Test that RGB images are converted to RGBA"""
-        rgb_image = Image.new("RGB", (50, 50), color="blue")
+        rgb_image = self._get_test_image(color="blue", size=(50, 50))
         Clipboard.copy_image(rgb_image)
         pasted = Clipboard.paste_image()
         self.assertEqual(pasted.mode, "RGBA")
@@ -86,7 +93,7 @@ class TestClipboard(Basetest):
 
     def test_content_detection_image(self):
         """Test detecting image content"""
-        test_image = Image.new("RGB", (100, 100), color="green")
+        test_image = self._get_test_image(color="green")
         Clipboard.copy_image(test_image)
 
         self.assertTrue(Clipboard.has_image())
@@ -117,7 +124,7 @@ class TestClipboard(Basetest):
 
     def test_copy_auto_detect_image(self):
         """Test auto-detect copy with image"""
-        test_image = Image.new("RGB", (100, 100), color="purple")
+        test_image = self._get_test_image(color="purple")
         Clipboard.copy(test_image)
 
         pasted = Clipboard.paste()
@@ -141,12 +148,13 @@ class TestClipboard(Basetest):
         # Should not raise even with detach=True
         Clipboard.copy(test_text, detach=True)
 
-        test_image = Image.new("RGB", (50, 50), color="yellow")
+        test_image = self._get_test_image(color="yellow", size=(50, 50))
         Clipboard.copy(test_image, detach=True)
 
     def test_get_image_bytes_png(self):
         """Test getting image as PNG bytes"""
-        test_image = Image.new("RGB", (100, 100), color="cyan")
+        # Uses default arguments (Cyan, 100x100)
+        test_image = self._get_test_image()
         Clipboard.copy_image(test_image)
 
         png_bytes = Clipboard.get_image_bytes("PNG")
@@ -159,7 +167,8 @@ class TestClipboard(Basetest):
 
     def test_get_image_bytes_jpeg(self):
         """Test getting image as JPEG bytes"""
-        test_image = Image.new("RGB", (100, 100), color="cyan")
+        # Uses default arguments (Cyan, 100x100)
+        test_image = self._get_test_image()
         Clipboard.copy_image(test_image)
 
         jpeg_bytes = Clipboard.get_image_bytes("JPEG")

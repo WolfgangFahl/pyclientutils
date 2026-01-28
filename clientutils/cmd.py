@@ -5,8 +5,8 @@ Command line entry point
 from argparse import ArgumentParser, Namespace
 
 from basemkit.base_cmd import BaseCmd
-
 import clientutils
+from clientutils.clipboard import Clipboard
 from clientutils.webserver import ClientUtilsServer
 
 
