@@ -52,12 +52,14 @@ class Clipboard:
             Converted PIL Image
         """
         if img_format.upper() == "JPEG":
-            # JPEG doesn't support transparency
             if img.mode in ("RGBA", "LA", "P"):
-                # Convert to RGB with white background
-                # This is simpler and more reliable
+                # Force the image to load completely before operations
+                # This prevents lazy-loading issues on Linux clipboards
+                img.load()
+
+                # JPEG doesn't support transparency, convert to RGB
                 rgb_image = Image.new("RGB", img.size, (255, 255, 255))
-                rgb_image.paste(img, (0, 0), img if img.mode in ("RGBA", "LA") else None)
+                rgb_image.paste(img, (0, 0), img)
                 return rgb_image
             elif img.mode != "RGB":
                 return img.convert("RGB")
