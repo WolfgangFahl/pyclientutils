@@ -3,9 +3,10 @@ Created on 2026-01-28
 
 @author: wf
 """
-from basemkit.basetest import Basetest
-from clientutils.webserver import ClientUtilsServer
 
+from basemkit.basetest import Basetest
+
+from clientutils.webserver import ClientUtilsServer
 
 
 class TestIcons(Basetest):
@@ -22,7 +23,6 @@ class TestIcons(Basetest):
         """Generator yielding full expected icon names"""
         for ext in ["jpg", "mp4", "xls"]:
             yield f"{ext}32x32.png"
-
 
     def test_get_icons_directory(self):
         """Test the get_icons_directory method"""

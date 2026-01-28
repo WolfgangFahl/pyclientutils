@@ -1,10 +1,10 @@
 """
 Simple REST server for serving file icons
 """
-from flask import Flask, send_from_directory
-from pathlib import Path
+
 from pathlib import Path
 
+from flask import Flask, send_from_directory
 
 
 class ClientUtilsServer:
@@ -42,11 +42,11 @@ class ClientUtilsServer:
         # Get the icons directory path
         icons_dir = self.get_icons_directory()
 
-        @self.app.route('/fileicon/<path:filename>')
+        @self.app.route("/fileicon/<path:filename>")
         def serve_icon(filename):
             """Serve file icons"""
             return send_from_directory(icons_dir, filename)
 
     def start(self):
         """Start the web server"""
-        self.app.run(host='0.0.0.0', port=self.port, debug=False)
+        self.app.run(host="0.0.0.0", port=self.port, debug=False)

@@ -7,15 +7,18 @@ from argparse import ArgumentParser, Namespace
 from basemkit.base_cmd import BaseCmd
 
 import clientutils
-
 from clientutils.webserver import ClientUtilsServer
+
+
 class Version:
     """Version information"""
+
     name = "clientutils"
     version = clientutils.__version__
     description = "MediaWiki Client Utilties"
     doc_url = "https://media.bitplan.com/index.php?title=CPSA-A-Analysis"
     updated = "2026-01-28"
+
 
 class ClientUtilsCmd(BaseCmd):
     """Command Line Interface"""
@@ -53,6 +56,7 @@ class ClientUtilsCmd(BaseCmd):
 
         # If --start not provided, just exit normally
         return False
+
 
 def main(argv=None):
     """Main entry point."""
