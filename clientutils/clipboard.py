@@ -51,14 +51,7 @@ class Clipboard:
         # JPEG does not support transparency (RGBA, LA).
         # We must convert to RGB.
         if img_format == "JPEG":
-            if img.mode in ("RGBA", "LA"):
-                # Create a white background for transparent images
-                background = Image.new("RGB", img.size, (255, 255, 255))
-                # 3-argument paste uses image alpha as a mask
-                background.paste(img, mask=img.split()[-1])
-                return background
-            elif img.mode != "RGB":
-                return img.convert("RGB")
+            img=img.convert("RGB")
 
         return img
 
