@@ -20,23 +20,21 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: [ '3.11', '3.12', '3.13' ]
-        # simplified build matrix to avoid rate limits
-        #os: [ubuntu-latest]
-        #python-version: ['3.11']
 
     steps:
     - uses: actions/checkout@v4
+
+    # Install Linux-specific dependencies ---
+    - name: Install Linux Display Dependencies
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y xvfb xclip
 
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
-
-    - name: Install system dependencies (Ubuntu)
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y xvfb xclip
 
     - name: Install dependencies
       run: |
@@ -46,7 +44,12 @@ jobs:
       run: |
         scripts/install
 
-
+    #  Run tests with xvfb if need be
     - name: tests
+      shell: bash  # Ensure consistent shell across all OSes
       run: |
-        scripts/test
+        if [ "$RUNNER_OS" == "Linux" ]; then
+          xvfb-run --auto-servernum scripts/test
+        else
+          scripts/test
+        fi
