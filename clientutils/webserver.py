@@ -4,7 +4,10 @@ Simple REST server for serving file icons and clipboard content
 
 from pathlib import Path
 
-from flask import Flask, Response, request, send_from_directory
+from fastapi import FastAPI, Query, HTTPException
+from fastapi.responses import Response
+from fastapi.staticfiles import StaticFiles
+import uvicorn
 
 from clientutils.clipboard import Clipboard
 
@@ -22,9 +25,13 @@ class ClientUtilsServer:
         "WEBP": "image/webp",
     }
 
-    def __init__(self, port=9998):
+    def __init__(self, port: int = 9998):
         self.port = port
-        self.app = Flask(__name__)
+        self.app = FastAPI(
+            title="ClientUtils Server",
+            description="Serve file icons and clipboard content",
+            version="1.0.0"
+        )
         self._setup_routes()
 
     def get_icons_directory(self) -> Path:
@@ -51,56 +58,78 @@ class ClientUtilsServer:
 
     def _setup_routes(self):
         """Configure routes for static file serving and clipboard access"""
-        icons_dir = self.get_icons_directory()
+        try:
+            icons_dir = self.get_icons_directory()
+            # Mount static files - automatically handles file serving and closing
+            self.app.mount(
+                "/fileicon",
+                StaticFiles(directory=str(icons_dir)),
+                name="fileicon"
+            )
+        except FileNotFoundError as e:
+            print(f"Warning: {e}")
 
-        @self.app.route("/fileicon/<path:filename>")
-        def serve_icon(filename):
-            """Serve file icons"""
-            return send_from_directory(icons_dir, filename)
-
-        @self.app.route("/clipboard")
-        def clipboard_content():
+        @self.app.get(
+            "/clipboard",
+            responses={
+                200: {"description": "Clipboard image content"},
+                204: {"description": "No image in clipboard"},
+                400: {"description": "Unsupported format"},
+                500: {"description": "Server error"}
+            }
+        )
+        def clipboard_content(
+            format: str = Query(
+                default="PNG",
+                description="Image format (PNG, JPEG, GIF, BMP, WEBP)",
+                pattern="^(PNG|JPEG|JPG|GIF|BMP|WEBP)$"
+            )
+        ):
             """
-            Return clipboard image content as download
+            Get clipboard image content as download.
 
-            Query Parameters:
-                format: Image format (PNG, JPEG, GIF, BMP, WEBP). Default: PNG
-
-            Examples:
-                /clipboard              -> Returns PNG
-                /clipboard?format=JPEG  -> Returns JPEG
+            Returns the current clipboard image in the specified format.
             """
+            img_format = format.upper()
+
+            # Validate format
+            if img_format not in self.SUPPORTED_FORMATS:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Unsupported format: {img_format}. Supported: {', '.join(self.SUPPORTED_FORMATS.keys())}"
+                )
+
             try:
-                # Get format parameter, default to PNG
-                img_format = request.args.get("format", "PNG").upper()
-
-                # Validate format
-                if img_format not in self.SUPPORTED_FORMATS:
-                    return Response(
-                        f"Unsupported format: {img_format}. Supported formats: {', '.join(self.SUPPORTED_FORMATS.keys())}",
-                        status=400,
-                    )
-
                 # Get clipboard content in requested format
                 image_bytes = Clipboard.get_image_bytes(img_format)
 
                 if image_bytes is None:
-                    return Response(status=204)  # NO_CONTENT
+                    return Response(status_code=204)  # NO_CONTENT
 
                 # Get MIME type and file extension
                 mime_type = self.SUPPORTED_FORMATS[img_format]
                 extension = img_format.lower()
 
                 return Response(
-                    image_bytes,
-                    mimetype=mime_type,
+                    content=image_bytes,
+                    media_type=mime_type,
                     headers={
                         "Content-Disposition": f"attachment; filename=clipboard.{extension}"
                     },
                 )
             except Exception as e:
-                return Response(str(e), status=500)
+                raise HTTPException(status_code=500, detail=str(e))
 
     def start(self):
-        """Start the web server"""
-        self.app.run(host="0.0.0.0", port=self.port, debug=False)
+        """Start the web server using uvicorn (async ASGI server)"""
+        uvicorn.run(
+            self.app,
+            host="0.0.0.0",
+            port=self.port,
+            log_level="info"
+        )
+
+
+if __name__ == "__main__":
+    server = ClientUtilsServer()
+    server.start()

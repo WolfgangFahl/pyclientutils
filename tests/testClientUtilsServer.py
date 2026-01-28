@@ -9,6 +9,7 @@ from io import BytesIO
 
 from basemkit.basetest import Basetest
 from PIL import Image
+from fastapi.testclient import TestClient
 
 from clientutils.clipboard import Clipboard
 from clientutils.webserver import ClientUtilsServer
@@ -22,7 +23,8 @@ class TestClientUtilsServer(Basetest):
     def setUp(self, debug=True, profile=True):
         Basetest.setUp(self, debug=debug, profile=profile)
         self.server = ClientUtilsServer()
-        self.client = self.server.app.test_client()
+        # Use FastAPI's TestClient instead of Flask's test_client()
+        self.client = TestClient(self.server.app)
         # Store original clipboard content
         try:
             self._original_clipboard = Clipboard.paste()
@@ -31,7 +33,7 @@ class TestClientUtilsServer(Basetest):
         icon_dir = self.server.get_icons_directory()
         test_image_path = f"{icon_dir}/xls32x32.png"
         self.assertTrue(os.path.isfile(test_image_path))
-        # Load as PIL Image first and topy to clipboard
+        # Load as PIL Image first and copy to clipboard
         test_image = Image.open(test_image_path)
 
         Clipboard.copy(test_image)
@@ -72,9 +74,11 @@ class TestClientUtilsServer(Basetest):
         """Test clipboard REST endpoint"""
         response = self.client.get("/clipboard")
         self.assertIn(response.status_code, [200])
-        self.assertEqual(response.mimetype, "image/png")
+        # FastAPI uses response.headers for content-type
+        self.assertEqual(response.headers["content-type"], "image/png")
         # Retrieve and verify the image content
-        image_data = BytesIO(response.data)
+        # FastAPI uses .content instead of .data
+        image_data = BytesIO(response.content)
         image = Image.open(image_data)
 
         # Check size
