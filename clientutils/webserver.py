@@ -1,5 +1,5 @@
 """
-Simple REST server for serving file icons and clipboard content
+ClientUtils Server with clipboard and file access support
 """
 
 from pathlib import Path
@@ -10,10 +10,11 @@ from fastapi.staticfiles import StaticFiles
 import uvicorn
 
 from clientutils.clipboard import Clipboard
+from clientutils.fileaccess import FileAccessResource, add_file_routes
 
 
 class ClientUtilsServer:
-    """Serves static file icons and clipboard content via HTTP"""
+    """Serves static file icons, clipboard content, and file access via HTTP"""
 
     # Supported image formats and their MIME types
     SUPPORTED_FORMATS = {
@@ -25,11 +26,12 @@ class ClientUtilsServer:
         "WEBP": "image/webp",
     }
 
-    def __init__(self, port: int = 9998):
+    def __init__(self, port: int = 9998, enable_file_access: bool = True):
         self.port = port
+        self.enable_file_access = enable_file_access
         self.app = FastAPI(
             title="ClientUtils Server",
-            description="Serve file icons and clipboard content",
+            description="Serve file icons, clipboard content, and file access",
             version="1.0.0"
         )
         self._setup_routes()
@@ -57,7 +59,7 @@ class ClientUtilsServer:
         return icons_dir.resolve()
 
     def _setup_routes(self):
-        """Configure routes for static file serving and clipboard access"""
+        """Configure routes for static file serving, clipboard access, and file operations"""
         try:
             icons_dir = self.get_icons_directory()
             # Mount static files - automatically handles file serving and closing
@@ -69,6 +71,12 @@ class ClientUtilsServer:
         except FileNotFoundError as e:
             print(f"Warning: {e}")
 
+        # Add file access routes if enabled
+        if self.enable_file_access:
+            base_url = f"http://localhost:{self.port}/"
+            file_resource = FileAccessResource(base_url=base_url)
+            add_file_routes(self.app, file_resource)
+
         @self.app.get(
             "/clipboard",
             responses={
@@ -76,7 +84,8 @@ class ClientUtilsServer:
                 204: {"description": "No image in clipboard"},
                 400: {"description": "Unsupported format"},
                 500: {"description": "Server error"}
-            }
+            },
+            tags=["clipboard"]
         )
         def clipboard_content(
             format: str = Query(
@@ -122,6 +131,13 @@ class ClientUtilsServer:
 
     def start(self):
         """Start the web server using uvicorn (async ASGI server)"""
+        print(f"Starting ClientUtils Server on http://0.0.0.0:{self.port}")
+        if self.enable_file_access:
+            print(f"  - File access: http://localhost:{self.port}/file?filename=<path>&action=<info|download|open|browse>")
+        print(f"  - Clipboard: http://localhost:{self.port}/clipboard?format=<PNG|JPEG|...>")
+        print(f"  - File icons: http://localhost:{self.port}/fileicon/<icon_name>")
+        print(f"  - API docs: http://localhost:{self.port}/docs")
+
         uvicorn.run(
             self.app,
             host="0.0.0.0",
