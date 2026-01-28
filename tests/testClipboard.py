@@ -20,19 +20,9 @@ class TestClipboard(Basetest):
     def setUp(self, debug=True, profile=True):
         Basetest.setUp(self, debug=debug, profile=profile)
         Clipboard.debug = debug
-        # Store original clipboard content
-        try:
-            self._original_clipboard = Clipboard.paste_text()
-        except:
-            self._original_clipboard = None
 
     def tearDown(self):
         # Restore original clipboard
-        if self._original_clipboard is not None:
-            try:
-                Clipboard.copy_text(self._original_clipboard)
-            except:
-                pass
         Basetest.tearDown(self)
 
     def _get_test_image(self, color="cyan", size=(100, 100)):
@@ -167,8 +157,6 @@ class TestClipboard(Basetest):
 
     def test_get_image_bytes_jpeg(self):
         """Test getting image as JPEG bytes"""
-        # force switch off of this test
-        return
         # Uses default arguments (Cyan, 100x100)
         test_image = self._get_test_image()
         Clipboard.copy_image(test_image)
