@@ -44,62 +44,21 @@ class Clipboard:
     @staticmethod
     def convert_image(img, img_format: str) -> Image.Image:
         """
-        Convert image mode if necessary for the target format
-
-        Args:
-            img: PIL Image to convert
-            img_format: Target format (e.g., 'PNG', 'JPEG')
-
-        Returns:
-            Converted PIL Image
+        Convert image mode ensuring compatibility with the target format.
         """
+        img_format = img_format.upper()
 
-        if Clipboard.debug:
-            print("=== CONVERT_IMAGE START ===", file=sys.stderr)
-            print(f"Mode: {img.mode}, Format: {img_format}", file=sys.stderr)
-            sys.stderr.flush()
-
-        if img_format.upper() == "JPEG":
-            if Clipboard.debug:
-                print("Detected JPEG target", file=sys.stderr)
-                sys.stderr.flush()
-
-            if img.mode in ("RGBA", "LA", "P"):
-                if Clipboard.debug:
-                    print(f"Converting {img.mode} to RGB...", file=sys.stderr)
-                    sys.stderr.flush()
-
-                # Force the image to load completely before operations
-                # This prevents lazy-loading issues on Linux clipboards
-                img.load()
-
-                if Clipboard.debug:
-                    print("Creating new RGB image...", file=sys.stderr)
-                    sys.stderr.flush()
-
-                rgb_image = Image.new("RGB", img.size, (255, 255, 255))
-
-                if Clipboard.debug:
-                    print("About to paste...", file=sys.stderr)
-                    sys.stderr.flush()
-
-                rgb_image.paste(img, (0, 0), img)
-
-                if Clipboard.debug:
-                    print("Paste complete", file=sys.stderr)
-                    sys.stderr.flush()
-
-                return rgb_image
-
+        # JPEG does not support transparency (RGBA, LA).
+        # We must convert to RGB.
+        if img_format == "JPEG":
+            if img.mode in ("RGBA", "LA"):
+                # Create a white background for transparent images
+                background = Image.new("RGB", img.size, (255, 255, 255))
+                # 3-argument paste uses image alpha as a mask
+                background.paste(img, mask=img.split()[-1])
+                return background
             elif img.mode != "RGB":
-                if Clipboard.debug:
-                    print(f"Converting {img.mode} directly to RGB", file=sys.stderr)
-                    sys.stderr.flush()
                 return img.convert("RGB")
-
-        if Clipboard.debug:
-            print("=== CONVERT_IMAGE END ===", file=sys.stderr)
-            sys.stderr.flush()
 
         return img
 
