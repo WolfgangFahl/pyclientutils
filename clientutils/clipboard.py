@@ -2,10 +2,10 @@
 Clipboard handling with content detection
 """
 
+import sys
 from enum import Enum
 from io import BytesIO
 from typing import Optional, Union
-import sys
 
 import copykitten
 from PIL import Image
@@ -23,7 +23,8 @@ class Clipboard:
     """
     Clipboard module with content detection
     """
-    debug=False
+
+    debug = False
 
     @staticmethod
     def get_content_type() -> ClipboardContentType:
@@ -58,12 +59,11 @@ class Clipboard:
                 background = Image.new("RGB", img.size, (255, 255, 255))
                 # 3-argument paste uses image alpha as a mask
                 background.paste(img, mask=img.split()[-1])
-                img=background
+                img = background
             elif img.mode != "RGB":
-                img=img.convert("RGB")
+                img = img.convert("RGB")
 
         return img
-
 
     @staticmethod
     def get_image_bytes(img_format: str = "PNG") -> Optional[bytes]:
@@ -82,7 +82,7 @@ class Clipboard:
                 return None
 
             if isinstance(img, Image.Image):
-                img=Clipboard.convert_image(img,img_format);
+                img = Clipboard.convert_image(img, img_format)
                 buffer = BytesIO()
                 img.save(buffer, format=img_format)
                 buffer.seek(0)

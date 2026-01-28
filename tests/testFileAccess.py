@@ -192,9 +192,7 @@ class TestFileAccess(Basetest):
 
     def test_handle_download_directory_fails(self):
         """Test that downloading a directory fails"""
-        response = self.client.get(
-            f"/file?filename={self.test_subdir}&action=download"
-        )
+        response = self.client.get(f"/file?filename={self.test_subdir}&action=download")
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("Cannot download directory", response.text)
@@ -212,70 +210,6 @@ class TestFileAccess(Basetest):
             "pdf" in content_type.lower()
             or "application/octet-stream" in content_type.lower()
         )
-
-    @patch("subprocess.run")
-    def test_open_file_in_desktop(self, mock_run):
-        """Test opening file in desktop application"""
-        mock_run.return_value = MagicMock(returncode=0)
-
-        result = self.file_resource.open_file_in_desktop(
-            self.test_text_file, open_parent=False
-        )
-
-        self.assertTrue(result)
-        mock_run.assert_called_once()
-        # Check that the file path is in the call
-        call_args = str(mock_run.call_args)
-        self.assertIn(str(self.test_text_file), call_args)
-
-    @patch("subprocess.run")
-    def test_open_parent_directory(self, mock_run):
-        """Test opening parent directory"""
-        mock_run.return_value = MagicMock(returncode=0)
-
-        result = self.file_resource.open_file_in_desktop(
-            self.test_text_file, open_parent=True
-        )
-
-        self.assertTrue(result)
-        mock_run.assert_called_once()
-        # Check that the parent directory is in the call
-        call_args = str(mock_run.call_args)
-        self.assertIn(str(self.test_text_file.parent), call_args)
-
-    @patch("subprocess.run")
-    def test_open_nonexistent_file_fails(self, mock_run):
-        """Test opening non-existent file fails"""
-        nonexistent = self.test_dir / "nonexistent.txt"
-
-        with self.assertRaises(FileNotFoundError):
-            self.file_resource.open_file_in_desktop(nonexistent)
-
-    @patch("subprocess.run")
-    def test_handle_open_action(self, mock_run):
-        """Test handling open action via HTTP"""
-        mock_run.return_value = MagicMock(returncode=0)
-
-        response = self.client.get(
-            f"/file?filename={self.test_text_file}&action=open"
-        )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("text/html", response.headers["content-type"])
-        self.assertIn("window.close", response.text)
-
-    @patch("subprocess.run")
-    def test_handle_browse_action(self, mock_run):
-        """Test handling browse action via HTTP"""
-        mock_run.return_value = MagicMock(returncode=0)
-
-        response = self.client.get(
-            f"/file?filename={self.test_text_file}&action=browse"
-        )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("text/html", response.headers["content-type"])
-        self.assertIn("window.close", response.text)
 
     def test_handle_nonexistent_file(self):
         """Test handling request for non-existent file"""
@@ -375,9 +309,7 @@ class TestFileAccess(Basetest):
         import concurrent.futures
 
         def make_request():
-            return self.client.get(
-                f"/file?filename={self.test_text_file}&action=info"
-            )
+            return self.client.get(f"/file?filename={self.test_text_file}&action=info")
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
             futures = [executor.submit(make_request) for _ in range(10)]

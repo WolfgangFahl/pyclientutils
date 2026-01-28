@@ -10,15 +10,15 @@ Provides REST endpoints for:
 - Browsing file directories
 """
 
-from pathlib import Path
-from datetime import datetime
-from typing import Optional, Dict, Any
-import mimetypes
-import subprocess
-import platform
 import logging
+import mimetypes
+import platform
+import subprocess
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, Optional
 
-from fastapi import Query, HTTPException
+from fastapi import HTTPException, Query
 from fastapi.responses import FileResponse, HTMLResponse, Response
 from jinja2 import Environment, FileSystemLoader, Template
 
@@ -164,9 +164,13 @@ class FileAccessResource:
             "path": str(file_path),
             "size": stat.st_size,
             "size_formatted": self._format_size(stat.st_size),
-            "modified": datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
+            "modified": datetime.fromtimestamp(stat.st_mtime).strftime(
+                "%Y-%m-%d %H:%M:%S"
+            ),
             "type": "Directory" if file_path.is_dir() else "File",
-            "extension": file_path.suffix.lstrip(".").lower() if file_path.is_file() else "",
+            "extension": (
+                file_path.suffix.lstrip(".").lower() if file_path.is_file() else ""
+            ),
             "is_file": file_path.is_file(),
             "is_dir": file_path.is_dir(),
         }
@@ -207,6 +211,7 @@ class FileAccessResource:
             URL for the action
         """
         from urllib.parse import urlencode
+
         params = urlencode({"filename": filename, "action": action})
         return f"{self.base_url}file?{params}"
 
@@ -214,7 +219,7 @@ class FileAccessResource:
         self,
         fileinfo: Dict[str, Any],
         template_name: str = "defaultinfo",
-        noheader: bool = False
+        noheader: bool = False,
     ) -> str:
         """
         Render file info as HTML.
@@ -277,10 +282,7 @@ class FileAccessResource:
             raise RuntimeError(f"Failed to open file: {e}")
 
     def handle_file_access(
-        self,
-        filename: str,
-        action: str = "info",
-        noheader: bool = True
+        self, filename: str, action: str = "info", noheader: bool = True
     ) -> Response:
         """
         Main handler for file access requests.
@@ -316,7 +318,9 @@ class FileAccessResource:
 
             elif action == "download":
                 if not file_path.is_file():
-                    raise HTTPException(status_code=400, detail="Cannot download directory")
+                    raise HTTPException(
+                        status_code=400, detail="Cannot download directory"
+                    )
 
                 # Determine MIME type
                 mime_type, _ = mimetypes.guess_type(str(file_path))
@@ -329,7 +333,7 @@ class FileAccessResource:
                     filename=file_path.name,
                     headers={
                         "Content-Disposition": f'attachment; filename="{file_path.name}"',
-                    }
+                    },
                 )
 
             elif action == "open":
@@ -339,7 +343,7 @@ class FileAccessResource:
                 except RuntimeError as e:
                     raise HTTPException(
                         status_code=500,
-                        detail=f"Server may be running in headless mode or file opening failed: {e}"
+                        detail=f"Server may be running in headless mode or file opening failed: {e}",
                     )
 
             elif action == "browse":
@@ -349,7 +353,7 @@ class FileAccessResource:
                 except RuntimeError as e:
                     raise HTTPException(
                         status_code=500,
-                        detail=f"Server may be running in headless mode or directory browsing failed: {e}"
+                        detail=f"Server may be running in headless mode or directory browsing failed: {e}",
                     )
 
             else:
@@ -380,21 +384,18 @@ def add_file_routes(app, file_resource: FileAccessResource):
             204: {"description": "File not found"},
             400: {"description": "Invalid request"},
             404: {"description": "File not found"},
-            500: {"description": "Server error"}
+            500: {"description": "Server error"},
         },
-        tags=["file"]
+        tags=["file"],
     )
     def access_file(
         filename: str = Query(..., description="Path to the file"),
         action: str = Query(
             default="info",
             description="Action to perform",
-            pattern="^(info|shortinfo|open|browse|download)$"
+            pattern="^(info|shortinfo|open|browse|download)$",
         ),
-        noheader: bool = Query(
-            default=True,
-            description="Omit HTML header"
-        )
+        noheader: bool = Query(default=True, description="Omit HTML header"),
     ):
         """
         Access a file with various actions.

@@ -5,6 +5,7 @@ Command line entry point
 from argparse import ArgumentParser, Namespace
 
 from basemkit.base_cmd import BaseCmd
+
 import clientutils
 from clientutils.clipboard import Clipboard
 from clientutils.webserver import ClientUtilsServer
@@ -48,7 +49,7 @@ class ClientUtilsCmd(BaseCmd):
             return True
 
         if args.debug:
-            Clipboard.debug=True
+            Clipboard.debug = True
 
         # Now handle our custom args
         if args.start:

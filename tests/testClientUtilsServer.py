@@ -8,8 +8,8 @@ import os
 from io import BytesIO
 
 from basemkit.basetest import Basetest
-from PIL import Image
 from fastapi.testclient import TestClient
+from PIL import Image
 
 from clientutils.clipboard import Clipboard
 from clientutils.webserver import ClientUtilsServer

@@ -4,10 +4,10 @@ ClientUtils Server with clipboard and file access support
 
 from pathlib import Path
 
-from fastapi import FastAPI, Query, HTTPException
+import uvicorn
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
-import uvicorn
 
 from clientutils.clipboard import Clipboard
 from clientutils.fileaccess import FileAccessResource, add_file_routes
@@ -32,7 +32,7 @@ class ClientUtilsServer:
         self.app = FastAPI(
             title="ClientUtils Server",
             description="Serve file icons, clipboard content, and file access",
-            version="1.0.0"
+            version="1.0.0",
         )
         self._setup_routes()
 
@@ -64,9 +64,7 @@ class ClientUtilsServer:
             icons_dir = self.get_icons_directory()
             # Mount static files - automatically handles file serving and closing
             self.app.mount(
-                "/fileicon",
-                StaticFiles(directory=str(icons_dir)),
-                name="fileicon"
+                "/fileicon", StaticFiles(directory=str(icons_dir)), name="fileicon"
             )
         except FileNotFoundError as e:
             print(f"Warning: {e}")
@@ -83,15 +81,15 @@ class ClientUtilsServer:
                 200: {"description": "Clipboard image content"},
                 204: {"description": "No image in clipboard"},
                 400: {"description": "Unsupported format"},
-                500: {"description": "Server error"}
+                500: {"description": "Server error"},
             },
-            tags=["clipboard"]
+            tags=["clipboard"],
         )
         def clipboard_content(
             format: str = Query(
                 default="PNG",
                 description="Image format (PNG, JPEG, GIF, BMP, WEBP)",
-                pattern="^(PNG|JPEG|JPG|GIF|BMP|WEBP)$"
+                pattern="^(PNG|JPEG|JPG|GIF|BMP|WEBP)$",
             )
         ):
             """
@@ -105,7 +103,7 @@ class ClientUtilsServer:
             if img_format not in self.SUPPORTED_FORMATS:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Unsupported format: {img_format}. Supported: {', '.join(self.SUPPORTED_FORMATS.keys())}"
+                    detail=f"Unsupported format: {img_format}. Supported: {', '.join(self.SUPPORTED_FORMATS.keys())}",
                 )
 
             try:
@@ -133,17 +131,16 @@ class ClientUtilsServer:
         """Start the web server using uvicorn (async ASGI server)"""
         print(f"Starting ClientUtils Server on http://0.0.0.0:{self.port}")
         if self.enable_file_access:
-            print(f"  - File access: http://localhost:{self.port}/file?filename=<path>&action=<info|download|open|browse>")
-        print(f"  - Clipboard: http://localhost:{self.port}/clipboard?format=<PNG|JPEG|...>")
+            print(
+                f"  - File access: http://localhost:{self.port}/file?filename=<path>&action=<info|download|open|browse>"
+            )
+        print(
+            f"  - Clipboard: http://localhost:{self.port}/clipboard?format=<PNG|JPEG|...>"
+        )
         print(f"  - File icons: http://localhost:{self.port}/fileicon/<icon_name>")
         print(f"  - API docs: http://localhost:{self.port}/docs")
 
-        uvicorn.run(
-            self.app,
-            host="0.0.0.0",
-            port=self.port,
-            log_level="info"
-        )
+        uvicorn.run(self.app, host="0.0.0.0", port=self.port, log_level="info")
 
 
 if __name__ == "__main__":
