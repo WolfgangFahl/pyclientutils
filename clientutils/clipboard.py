@@ -42,6 +42,30 @@ class Clipboard:
         return ClipboardContentType.EMPTY
 
     @staticmethod
+    def convert_image(img, img_format: str) -> Image.Image:
+        """
+        Convert image mode ensuring compatibility with the target format.
+
+        Args:
+            img_format(str): the target format of the image
+        """
+        img_format = img_format.upper()
+        # JPEG does not support transparency (RGBA, LA).
+        # We must convert to RGB.
+        if img_format == "JPEG":
+            if img.mode in ("RGBA", "LA"):
+                # Create a white background for transparent images
+                background = Image.new("RGB", img.size, (255, 255, 255))
+                # 3-argument paste uses image alpha as a mask
+                background.paste(img, mask=img.split()[-1])
+                img=background
+            elif img.mode != "RGB":
+                img=img.convert("RGB")
+
+        return img
+
+
+    @staticmethod
     def get_image_bytes(img_format: str = "PNG") -> Optional[bytes]:
         """
         Get clipboard image content as bytes in the given format

@@ -22,7 +22,7 @@ dependencies = [
     # https://github.com/psf/requests
     "requests>=2.31.0",
     # https://github.com/python-pillow/Pillow
-    "pillow>=10.0.0",
+    "pillow>=12.1.0",
     # https://github.com/asweigart/pyperclip
 	# "pyperclip>=1.11.0"
 	# https://github.com/spyoungtech/pyclip
