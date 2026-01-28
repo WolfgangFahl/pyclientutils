@@ -3,6 +3,7 @@ ClientUtils Server with clipboard and file access support
 """
 
 from pathlib import Path
+from typing import Optional
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, Query
@@ -11,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 
 from clientutils.clipboard import Clipboard
 from clientutils.fileaccess import FileAccessResource, add_file_routes
+from clientutils.version import Version
 
 
 class ClientUtilsServer:
@@ -26,13 +28,35 @@ class ClientUtilsServer:
         "WEBP": "image/webp",
     }
 
-    def __init__(self, port: int = 9998, enable_file_access: bool = True):
+    def __init__(
+        self,
+        host: str = "0.0.0.0",
+        port: int = 9998,
+        enable_file_access: bool = True,
+        icons_dir: Optional[Path] = None,
+        external_base_url: Optional[str] = None,
+        log_level: str = "info",
+    ):
+        """
+        Args:
+            host: the host/iface to bind (default "0.0.0.0")
+            port: the port to listen on (default 9998)
+            enable_file_access: whether to register file access routes
+            icons_dir: optional explicit path to icons directory (Path or str)
+            external_base_url: optional base URL for FileAccessResource (overrides host/port)
+            log_level: uvicorn log level
+        """
+        self.host = host
         self.port = port
         self.enable_file_access = enable_file_access
+        self.icons_dir_override = Path(icons_dir) if icons_dir else None
+        self.external_base_url = external_base_url
+        self.log_level = log_level
+
         self.app = FastAPI(
-            title="ClientUtils Server",
-            description="Serve file icons, clipboard content, and file access",
-            version="1.0.0",
+            title=Version.name,
+            description=Version.description,
+            version=Version.version,
         )
         self._setup_routes()
 

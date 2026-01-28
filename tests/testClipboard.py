@@ -4,12 +4,13 @@ Created on 2026-01-28
 @author: wf
 """
 
-from io import BytesIO
 import platform
 import unittest
+from io import BytesIO
 
-from PIL import Image
 from basemkit.basetest import Basetest
+from PIL import Image
+
 from clientutils.clipboard import Clipboard, ClipboardContentType
 
 
@@ -133,9 +134,7 @@ class TestClipboard(Basetest):
         with self.assertRaises(TypeError):
             Clipboard.copy({"key": "value"})
 
-    @unittest.skipIf(
-        platform.system() == "Linux",  "avoid hang"
-    )
+    @unittest.skipIf(platform.system() == "Linux", "avoid hang")
     def test_copy_with_detach(self):
         """Test copy with detach parameter"""
         test_text = "Detached text"
@@ -145,9 +144,7 @@ class TestClipboard(Basetest):
         test_image = self._get_test_image(color="yellow", size=(50, 50))
         Clipboard.copy(test_image, detach=True)
 
-    @unittest.skipIf(
-        platform.system() == "Linux",  "avoid hang"
-    )
+    @unittest.skipIf(platform.system() == "Linux", "avoid hang")
     def test_get_image_bytes_png(self):
         """Test getting image as PNG bytes"""
         # Uses default arguments (Cyan, 100x100)
@@ -162,9 +159,7 @@ class TestClipboard(Basetest):
         loaded_image = Image.open(BytesIO(png_bytes))
         self.assertEqual(loaded_image.size, test_image.size)
 
-    @unittest.skipIf(
-        platform.system() == "Linux",  "avoid hang"
-    )
+    @unittest.skipIf(platform.system() == "Linux", "avoid hang")
     def test_get_image_bytes_jpeg(self):
         """Test getting image as JPEG bytes"""
         # Uses default arguments (Cyan, 100x100)

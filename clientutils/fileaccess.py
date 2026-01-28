@@ -10,18 +10,16 @@ Provides REST endpoints for:
 - Browsing file directories
 """
 
-from datetime import datetime
 import logging
 import mimetypes
-from pathlib import Path
 import platform
 import subprocess
+from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict
 
 from fastapi import HTTPException, Query
 from fastapi.responses import FileResponse, HTMLResponse, Response
-
-
 
 logger = logging.getLogger(__name__)
 
@@ -30,12 +28,20 @@ class FileAccessResource:
     """Handles file access operations via REST endpoints"""
 
     @staticmethod
-    def _render_default_info(fileinfo: Dict[str, Any], baseurl: str,
-                              openiconName: str, downloadlink: str,
-                              browselink: str, openlink: str, noheader: bool) -> str:
+    def _render_default_info(
+        fileinfo: Dict[str, Any],
+        baseurl: str,
+        openiconName: str,
+        downloadlink: str,
+        browselink: str,
+        openlink: str,
+        noheader: bool,
+    ) -> str:
         """Render default info template using f-strings."""
 
-        icon_html = f'<img src="{baseurl}fileicon/{openiconName}" class="icon" alt="icon">'
+        icon_html = (
+            f'<img src="{baseurl}fileicon/{openiconName}" class="icon" alt="icon">'
+        )
 
         table_content = f"""
         <table class="info-table">
@@ -105,8 +111,9 @@ class FileAccessResource:
     """
 
     @staticmethod
-    def _render_short_info(fileinfo: Dict[str, Any], downloadlink: str,
-                           browselink: str, openlink: str) -> str:
+    def _render_short_info(
+        fileinfo: Dict[str, Any], downloadlink: str, browselink: str, openlink: str
+    ) -> str:
         """Render short info template using f-strings."""
         return f"""
     <div style="padding: 10px; border: 1px solid #ccc; border-radius: 5px; background: #f9f9f9;">
@@ -253,7 +260,13 @@ class FileAccessResource:
             return self._render_short_info(fileinfo, downloadlink, browselink, openlink)
         else:
             return self._render_default_info(
-                fileinfo, baseurl, openiconName, downloadlink, browselink, openlink, noheader
+                fileinfo,
+                baseurl,
+                openiconName,
+                downloadlink,
+                browselink,
+                openlink,
+                noheader,
             )
 
     def open_file_in_desktop(self, file_path: Path, open_parent: bool = False) -> bool:
