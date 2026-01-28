@@ -1,0 +1,61 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pyclientutils"
+description = "nicegui based Scholia"
+authors = [
+  {name = "Wolfgang Fahl", email = "wf@bitplan.com"}
+]
+readme = "README.md"
+license = "Apache-2.0"
+dependencies = [
+    # https://github.com/WolfgangFahl/pybasemkit
+    "pybasemkit>=0.1.6",
+    # https://github.com/pallets/flask
+    "flask>=3.1.0",
+    # https://github.com/psf/requests
+    "requests>=2.31.0",
+    # https://github.com/python-pillow/Pillow
+    "pillow>=10.0.0"
+]
+requires-python = ">=3.11"
+
+classifiers=[
+    "Development Status :: 4 - Beta",
+    "Environment :: Web Environment",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development :: User Interfaces",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Education",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License"
+    ]
+
+dynamic = ["version"]
+[tool.hatch.version]
+path = "clientutils/__init__.py"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+
+[project.urls]
+Home = "https://github.com/WolfgangFahl/pyclientutils"
+
+
+[tool.hatch.build.targets.wheel]
+only-include = ["clientutils"]
+
+[tool.hatch.build.targets.wheel.sources]
+"clientutils" = "clientutils"
+"clientutils_examples" = "clientutils_examples"
+
+[project.scripts]
+clientutils = "clientutils.cmd:main"

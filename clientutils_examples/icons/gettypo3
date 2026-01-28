@@ -1,0 +1,26 @@
+#!/bin/bash
+# get Typo 3 icons
+src=https://newsletter.htw-berlin.de/_Resources/Static/Packages/TYPO3.Media/Icons/512px/
+
+list() {
+tmp=/tmp/icons.lst
+curl -s $src -o $tmp
+cat $tmp | grep href | cut -f 3 -d ' ' | cut -f1 -d '<'
+}
+
+for icon in $(list)
+do
+	ext=$(basename $icon .png)
+  if [ ! -f ${ext}32x32.png ]
+	then
+	  case $ext in
+		  _*) ;;
+			Parent) ;;
+			*)
+        echo $icon $ext
+	      wget $src/$icon
+	    	convert $icon -resize 32x32 ${ext}32x32.png
+	     	rm $icon
+	  esac
+	fi
+done
