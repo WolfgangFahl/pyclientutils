@@ -15,7 +15,7 @@ env:
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
@@ -26,10 +26,17 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
+
+    - name: Install system dependencies (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y xvfb xclip
 
     - name: Install dependencies
       run: |
@@ -39,6 +46,12 @@ jobs:
       run: |
         scripts/install
 
-    - name: Run tests
+    - name: Run tests (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        xvfb-run -a scripts/test
+
+    - name: Run tests (non-Ubuntu)
+      if: matrix.os != 'ubuntu-latest'
       run: |
         scripts/test
