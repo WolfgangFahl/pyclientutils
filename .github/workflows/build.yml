@@ -46,12 +46,7 @@ jobs:
       run: |
         scripts/install
 
-    - name: Run tests (Ubuntu)
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        xvfb-run -a scripts/test
 
-    - name: Run tests (non-Ubuntu)
-      if: matrix.os != 'ubuntu-latest'
+    - name: tests
       run: |
         scripts/test
