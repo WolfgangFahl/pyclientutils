@@ -19,6 +19,7 @@ class TestClipboard(Basetest):
 
     def setUp(self, debug=True, profile=True):
         Basetest.setUp(self, debug=debug, profile=profile)
+        Clipboard.debug=debug
         # Store original clipboard content
         try:
             self._original_clipboard = Clipboard.paste_text()

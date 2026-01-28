@@ -47,6 +47,9 @@ class ClientUtilsCmd(BaseCmd):
         if handled:
             return True
 
+        if args.debug:
+            Clipboard.debug=True
+
         # Now handle our custom args
         if args.start:
             server = ClientUtilsServer(port=args.port)

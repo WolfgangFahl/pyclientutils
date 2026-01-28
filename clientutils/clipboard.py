@@ -5,6 +5,7 @@ Clipboard handling with content detection
 from enum import Enum
 from io import BytesIO
 from typing import Optional, Union
+import sys
 
 import copykitten
 from PIL import Image
@@ -22,6 +23,7 @@ class Clipboard:
     """
     Clipboard module with content detection
     """
+    debug=False
 
     @staticmethod
     def get_content_type() -> ClipboardContentType:
@@ -51,18 +53,54 @@ class Clipboard:
         Returns:
             Converted PIL Image
         """
+
+        if Clipboard.debug:
+            print("=== CONVERT_IMAGE START ===", file=sys.stderr)
+            print(f"Mode: {img.mode}, Format: {img_format}", file=sys.stderr)
+            sys.stderr.flush()
+
         if img_format.upper() == "JPEG":
+            if Clipboard.debug:
+                print("Detected JPEG target", file=sys.stderr)
+                sys.stderr.flush()
+
             if img.mode in ("RGBA", "LA", "P"):
+                if Clipboard.debug:
+                    print(f"Converting {img.mode} to RGB...", file=sys.stderr)
+                    sys.stderr.flush()
+
                 # Force the image to load completely before operations
                 # This prevents lazy-loading issues on Linux clipboards
                 img.load()
 
-                # JPEG doesn't support transparency, convert to RGB
+                if Clipboard.debug:
+                    print("Creating new RGB image...", file=sys.stderr)
+                    sys.stderr.flush()
+
                 rgb_image = Image.new("RGB", img.size, (255, 255, 255))
+
+                if Clipboard.debug:
+                    print("About to paste...", file=sys.stderr)
+                    sys.stderr.flush()
+
                 rgb_image.paste(img, (0, 0), img)
+
+                if Clipboard.debug:
+                    print("Paste complete", file=sys.stderr)
+                    sys.stderr.flush()
+
                 return rgb_image
+
             elif img.mode != "RGB":
+                if Clipboard.debug:
+                    print(f"Converting {img.mode} directly to RGB", file=sys.stderr)
+                    sys.stderr.flush()
                 return img.convert("RGB")
+
+        if Clipboard.debug:
+            print("=== CONVERT_IMAGE END ===", file=sys.stderr)
+            sys.stderr.flush()
+
         return img
 
 
