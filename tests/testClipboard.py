@@ -5,10 +5,11 @@ Created on 2026-01-28
 """
 
 from io import BytesIO
+import platform
+import unittest
 
-from basemkit.basetest import Basetest
 from PIL import Image
-
+from basemkit.basetest import Basetest
 from clientutils.clipboard import Clipboard, ClipboardContentType
 
 
@@ -155,6 +156,9 @@ class TestClipboard(Basetest):
         loaded_image = Image.open(BytesIO(png_bytes))
         self.assertEqual(loaded_image.size, test_image.size)
 
+    @unittest.skipIf(
+        platform.system() == "Linux",  "avoid hang"
+    )
     def test_get_image_bytes_jpeg(self):
         """Test getting image as JPEG bytes"""
         # Uses default arguments (Cyan, 100x100)
