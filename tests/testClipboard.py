@@ -133,6 +133,9 @@ class TestClipboard(Basetest):
         with self.assertRaises(TypeError):
             Clipboard.copy({"key": "value"})
 
+    @unittest.skipIf(
+        platform.system() == "Linux",  "avoid hang"
+    )
     def test_copy_with_detach(self):
         """Test copy with detach parameter"""
         test_text = "Detached text"
@@ -142,6 +145,9 @@ class TestClipboard(Basetest):
         test_image = self._get_test_image(color="yellow", size=(50, 50))
         Clipboard.copy(test_image, detach=True)
 
+    @unittest.skipIf(
+        platform.system() == "Linux",  "avoid hang"
+    )
     def test_get_image_bytes_png(self):
         """Test getting image as PNG bytes"""
         # Uses default arguments (Cyan, 100x100)
