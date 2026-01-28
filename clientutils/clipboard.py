@@ -40,22 +40,27 @@ class Clipboard:
         return ClipboardContentType.EMPTY
 
     @staticmethod
-    def convert_image(img,img_format:str)-> Optional[bytes]:
-        # Convert image mode if necessary for the target format
+    def convert_image(img, img_format: str) -> Image.Image:
+        """
+        Convert image mode if necessary for the target format
+
+        Args:
+            img: PIL Image to convert
+            img_format: Target format (e.g., 'PNG', 'JPEG')
+
+        Returns:
+            Converted PIL Image
+        """
         if img_format.upper() == "JPEG":
             # JPEG doesn't support transparency
             if img.mode in ("RGBA", "LA", "P"):
-                # Create RGB image with white background
-                background = Image.new("RGB", img.size, (255, 255, 255))
-                if img.mode == "P":
-                    img = img.convert("RGBA")
-                if img.mode in ("RGBA", "LA"):
-                    background.paste(img, mask=img.split()[-1])  # Use alpha channel
-                else:
-                    background.paste(img)
-                img = background
+                # Convert to RGB with white background
+                # This is simpler and more reliable
+                rgb_image = Image.new("RGB", img.size, (255, 255, 255))
+                rgb_image.paste(img, (0, 0), img if img.mode in ("RGBA", "LA") else None)
+                return rgb_image
             elif img.mode != "RGB":
-                img = img.convert("RGB")
+                return img.convert("RGB")
         return img
 
 
