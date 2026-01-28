@@ -18,7 +18,14 @@ dependencies = [
     # https://github.com/psf/requests
     "requests>=2.31.0",
     # https://github.com/python-pillow/Pillow
-    "pillow>=10.0.0"
+    "pillow>=10.0.0",
+    # https://github.com/asweigart/pyperclip
+	# "pyperclip>=1.11.0"
+	# https://github.com/spyoungtech/pyclip
+	# "pyclip>=0.7.0"
+	# https://github.com/klavionik/copykitten
+	"copykitten>=2.0.0"
+
 ]
 requires-python = ">=3.11"
 
