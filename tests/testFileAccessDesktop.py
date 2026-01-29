@@ -13,7 +13,7 @@ from basemkit.basetest import Basetest
 from fastapi.applications import FastAPI
 from fastapi.testclient import TestClient
 
-from clientutils.fileaccess import FileAccessResource, add_file_routes
+from clientutils.fileaccess import FileAccessResource
 
 
 class TestFileAccessDesktopIntegration(Basetest):
@@ -33,7 +33,7 @@ class TestFileAccessDesktopIntegration(Basetest):
             base_url=f"http://localhost:{self.port}/"
         )
         self.app = FastAPI()
-        add_file_routes(self.app, self.file_resource)
+        self.file_resource.add_file_routes(self.app)
         self.client = TestClient(self.app)
 
         # Set up mocking (this is the DRY part)

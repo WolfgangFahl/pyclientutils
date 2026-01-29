@@ -5,12 +5,10 @@ ClientUtils Server with clipboard, file access, and path mapping support
 WF 2026-01-28 migrated from 2015 Java Jersey RESTful solution
 """
 
-from pathlib import Path
 from typing import Optional
 
 from clientutils.clipboard import Clipboard
-from clientutils.fileaccess import FileAccessResource, add_file_routes, \
-    FileAccess
+from clientutils.fileaccess import FileAccessResource, FileAccess
 from clientutils.pathmapping import PathMapping, OSType
 from clientutils.version import Version
 from fastapi import FastAPI, HTTPException, Query
@@ -88,7 +86,7 @@ class ClientUtilsServer:
         if self.enable_file_access:
             base_url = f"http://localhost:{self.port}/"
             file_resource = FileAccessResource(base_url=base_url,path_mapping=self.path_mapping)
-            add_file_routes(self.app, file_resource)
+            file_resource.add_file_routes(self.app)
 
         @self.app.get(
             "/clipboard",

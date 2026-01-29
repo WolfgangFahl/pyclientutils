@@ -4,16 +4,15 @@ Created on 2026-01-28
 @author: wf
 """
 
+from pathlib import Path
 import subprocess
 import tempfile
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from basemkit.basetest import Basetest
+from clientutils.fileaccess import FileAccessResource, FileAccess
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-
-from clientutils.fileaccess import FileAccessResource, add_file_routes
 
 
 class TestFileAccess(Basetest):
@@ -47,7 +46,7 @@ class TestFileAccess(Basetest):
 
         # Create FastAPI app with routes for HTTP testing
         self.app = FastAPI()
-        add_file_routes(self.app, self.file_resource)
+        self.file_resource.add_file_routes(self.app)
         self.client = TestClient(self.app)
 
     def tearDown(self):
@@ -98,17 +97,17 @@ class TestFileAccess(Basetest):
 
     def test_get_icon_name_directory(self):
         """Test getting icon name for directory"""
-        icon = self.file_resource.get_icon_name(self.test_subdir)
+        icon = FileAccess.get_icon_name(self.test_subdir)
         self.assertEqual(icon, "folder32x32.png")
 
     def test_get_icon_name_text_file(self):
         """Test getting icon name for text file"""
-        icon = self.file_resource.get_icon_name(self.test_text_file)
+        icon = FileAccess.get_icon_name(self.test_text_file)
         self.assertEqual(icon, "txt32x32.png")
 
     def test_get_icon_name_pdf_file(self):
         """Test getting icon name for PDF file"""
-        icon = self.file_resource.get_icon_name(self.test_pdf_file)
+        icon = FileAccess.get_icon_name(self.test_pdf_file)
         self.assertEqual(icon, "pdf32x32.png")
 
     def test_get_icon_name_no_extension(self):
@@ -116,7 +115,7 @@ class TestFileAccess(Basetest):
         no_ext_file = self.test_dir / "noext"
         no_ext_file.write_text("content")
 
-        icon = self.file_resource.get_icon_name(no_ext_file)
+        icon = FileAccess.get_icon_name(no_ext_file)
         self.assertEqual(icon, "file32x32.png")
 
     def test_get_action_link(self):
@@ -250,7 +249,7 @@ class TestFileAccess(Basetest):
             file_info = self.file_resource.get_file_info(str(test_file))
             self.assertEqual(file_info["extension"], ext)
 
-            icon = self.file_resource.get_icon_name(test_file)
+            icon = FileAccess.get_icon_name(test_file)
             self.assertEqual(icon, f"{ext}32x32.png")
 
     def test_large_file_size_formatting(self):

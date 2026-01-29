@@ -53,6 +53,24 @@ class FileAccess:
 
         return icons_dir.resolve()
 
+    @classmethod
+    def get_icon_name(cls, file_path: Path) -> str:
+        """
+        Get icon name for the given file or folder.
+
+        Args:
+            file_path: Path object
+
+        Returns:
+            Icon filename
+        """
+        icon_name=None
+        if file_path.is_dir():
+            icon_name="folder32x32.png"
+        else:
+            ext = file_path.suffix.lstrip(".").lower()
+            icon_name=f"{ext}32x32.png" if ext else "file32x32.png"
+        return icon_name
 
 
 class FileAccessResource:
@@ -232,21 +250,7 @@ class FileAccessResource:
             size /= 1024.0
         return f"{size:.2f} PB"
 
-    def get_icon_name(self, file_path: Path) -> str:
-        """
-        Get icon name for the given file or folder.
 
-        Args:
-            file_path: Path object
-
-        Returns:
-            Icon filename
-        """
-        if file_path.is_dir():
-            return "folder32x32.png"
-
-        ext = file_path.suffix.lstrip(".").lower()
-        return f"{ext}32x32.png" if ext else "file32x32.png"
 
     def get_action_link(self, filename: str, action: str) -> str:
         """
@@ -285,7 +289,7 @@ class FileAccessResource:
 
         # Prepare common context
         baseurl = self.base_url
-        openiconName = self.get_icon_name(file_path)
+        openiconName = FileAccess.get_icon_name(file_path)
         downloadlink = self.get_action_link(fileinfo["path"], "download")
         browselink = self.get_action_link(fileinfo["path"], "browse")
         openlink = self.get_action_link(fileinfo["path"], "open")
@@ -426,42 +430,41 @@ class FileAccessResource:
             raise HTTPException(status_code=500, detail=str(e))
 
 
-def add_file_routes(app, file_resource: FileAccessResource):
-    """
-    Add file access routes to FastAPI application.
-
-    Args:
-        app: FastAPI application instance
-        file_resource: FileAccessResource instance
-    """
-
-    @app.get(
-        "/file",
-        responses={
-            200: {"description": "File information or download"},
-            204: {"description": "File not found"},
-            400: {"description": "Invalid request"},
-            404: {"description": "File not found"},
-            500: {"description": "Server error"},
-        },
-        tags=["file"],
-    )
-    def access_file(
-        filename: str = Query(..., description="Path to the file"),
-        action: str = Query(
-            default="info",
-            description="Action to perform",
-            pattern="^(info|shortinfo|open|browse|download)$",
-        ),
-        noheader: bool = Query(default=True, description="Omit HTML header"),
-    ):
+    def add_file_routes(self,app):
         """
-        Access a file with various actions.
+        Add file access routes to FastAPI application.
 
-        - **info**: Display detailed file information
-        - **shortinfo**: Display brief file information
-        - **open**: Open file in default application
-        - **browse**: Open file's parent directory
-        - **download**: Download the file
+        Args:
+            app: FastAPI application instance
         """
-        return file_resource.handle_file_access(filename, action, noheader)
+
+        @app.get(
+            "/file",
+            responses={
+                200: {"description": "File information or download"},
+                204: {"description": "File not found"},
+                400: {"description": "Invalid request"},
+                404: {"description": "File not found"},
+                500: {"description": "Server error"},
+            },
+            tags=["file"],
+        )
+        def access_file(
+            filename: str = Query(..., description="Path to the file"),
+            action: str = Query(
+                default="info",
+                description="Action to perform",
+                pattern="^(info|shortinfo|open|browse|download)$",
+            ),
+            noheader: bool = Query(default=True, description="Omit HTML header"),
+        ):
+            """
+            Access a file with various actions.
+
+            - **info**: Display detailed file information
+            - **shortinfo**: Display brief file information
+            - **open**: Open file in default application
+            - **browse**: Open file's parent directory
+            - **download**: Download the file
+            """
+            return self.handle_file_access(filename, action, noheader)

@@ -75,6 +75,7 @@ class ClientUtilsCmd(BaseCmd):
                 port=args.port,
                 enable_file_access=enable_file_access,
                 external_base_url=args.external_base_url,
+                path_mapping_yaml_path=args.path_mapping_yaml_path,
                 log_level=args.log_level,
             )
             print(
