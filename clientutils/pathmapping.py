@@ -187,3 +187,46 @@ class PathMapping:
             "mount_config": self.mount_config.to_dict(),
             "mappings": [m.to_dict() for m in self.mappings],
         }
+
+    def translate_ospath(self, filepath: str, from_os: OSType = None, to_os: OSType = None) -> str:
+        """Translate path from one OS to another."""
+        if from_os is None:
+            from_os = OSType.from_platform()
+        if to_os is None:
+            to_os = OSType.from_platform()
+
+        filepath = filepath.replace("\\", "/")
+        target_path = filepath  # Default to original path
+
+        mapping = self.get_mapping_by_path(filepath, from_os)
+        if mapping:
+            source = mapping.get_path(from_os)
+            target = mapping.get_path(to_os)
+
+            if not self.case_sensitive and filepath.lower().startswith(source.lower()):
+                target_path = target + filepath[len(source):]
+            elif filepath.startswith(source):
+                target_path = filepath.replace(source, target, 1)
+
+        return target_path
+
+    def translate(self, filepath: str) -> str:
+        """
+        Translate path to current OS, auto-detecting source OS.
+
+        Source OS detection: Windows if drive letter present (e.g., C:, X:), otherwise Linux.
+
+        Args:
+            filepath: Path to translate
+
+        Returns:
+            Translated path for current OS
+        """
+        # Detect source OS: Windows if drive letter present, otherwise Linux
+        from_os = OSType.WINDOWS if len(filepath) >= 2 and filepath[1] == ':' else OSType.LINUX
+
+        # Target is always current platform
+        to_os = OSType.from_platform()
+
+        return self.translate_ospath(filepath, from_os, to_os)
+

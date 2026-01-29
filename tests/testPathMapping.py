@@ -263,6 +263,56 @@ mappings:
             if self.debug:
                 print(f"{os_type.value}: {actual_path}")
 
+    def test_translate_ospath(self):
+        """Test translating paths between operating systems."""
+        config = self.get_test_mapping()
+
+        test_cases = [
+            # (filepath, from_os, to_os, expected_result, description)
+            ("P:/myproject/file.txt", OSType.WINDOWS, OSType.LINUX, "/mnt/projects/myproject/file.txt", "Windows to Linux"),
+            ("/mnt/projects/myproject/file.txt", OSType.LINUX, OSType.WINDOWS, "P:/myproject/file.txt", "Linux to Windows"),
+            ("D:\\docs\\report.pdf", OSType.WINDOWS, OSType.MACOS, "/Volumes/documents/docs/report.pdf", "Windows to macOS with backslashes"),
+            ("/Volumes/media/videos/movie.mp4", OSType.MACOS, OSType.LINUX, "/mnt/media/videos/movie.mp4", "macOS to Linux"),
+        ]
+
+        for filepath, from_os, to_os, expected, description in test_cases:
+            with self.subTest(case=description):
+                result = config.translate_ospath(filepath, from_os, to_os)
+                self.assertEqual(result, expected)
+                if self.debug:
+                    print(f"{description}: {filepath} -> {result}")
+
+    def test_translate_auto_detect(self):
+        """Test auto-detecting source OS and translating to current OS."""
+        config = self.get_test_mapping()
+        current_os = OSType.from_platform()
+
+        # Test cases based on current OS
+        test_cases = []
+
+        if current_os == OSType.WINDOWS:
+            test_cases = [
+                ("P:/myproject/file.txt", "P:/myproject/file.txt", "Windows path on Windows"),
+                ("/mnt/projects/myproject/file.txt", "P:/myproject/file.txt", "Linux path to Windows"),
+            ]
+        elif current_os == OSType.LINUX:
+            test_cases = [
+                ("P:/myproject/file.txt", "/mnt/projects/myproject/file.txt", "Windows path to Linux"),
+                ("/mnt/projects/myproject/file.txt", "/mnt/projects/myproject/file.txt", "Linux path on Linux"),
+            ]
+        elif current_os == OSType.MACOS:
+            test_cases = [
+                ("P:/myproject/file.txt", "/Volumes/projects/myproject/file.txt", "Windows path to macOS"),
+                ("/mnt/projects/myproject/file.txt", "/Volumes/projects/myproject/file.txt", "Linux path to macOS"),
+            ]
+
+        for filepath, expected, description in test_cases:
+            with self.subTest(case=description):
+                result = config.translate(filepath)
+                self.assertEqual(result, expected)
+                if self.debug:
+                    print(f"{description}: {filepath} -> {result}")
+
     def tearDown(self):
         """Clean up test files."""
         if hasattr(self, 'test_yaml') and os.path.exists(self.test_yaml):
