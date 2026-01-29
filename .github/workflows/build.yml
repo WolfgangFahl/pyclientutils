@@ -45,10 +45,10 @@ jobs:
     # avoid copykitten.CopykittenError: Clipboard was never initialized.
     - name: Run tests (Linux with XVFB)
       if: runner.os == 'Linux'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y xvfb
-        xvfb-run -a scripts/test
+      uses: coactions/setup-xvfb@v1
+      with:
+        run: scripts/test
+
 
     - name: Run tests (macOS/Windows)
       if: runner.os != 'Linux'
