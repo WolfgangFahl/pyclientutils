@@ -10,16 +10,19 @@ Provides REST endpoints for:
 - Browsing file directories
 """
 
+from datetime import datetime
 import logging
 import mimetypes
+from pathlib import Path
 import platform
 import subprocess
-from datetime import datetime
-from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from fastapi import HTTPException, Query
 from fastapi.responses import FileResponse, HTMLResponse, Response
+
+from clientutils.pathmapping import PathMapping
+
 
 logger = logging.getLogger(__name__)
 
@@ -142,15 +145,18 @@ class FileAccessResource:
 </html>
 """
 
-    def __init__(self, base_url: str = "http://localhost:9998/"):
+    def __init__(self, base_url: str, path_mapping: Optional[PathMapping] = None):
         """
-        Initialize file access resource.
+        construct file access resource.
 
         Args:
             base_url: Base URL for the server
+            path_mapping: Optional path mapping configuration for translating
+                logical paths to OS paths. If provided, will be used to map
+                requested paths before resolving them to the filesystem.
         """
         self.base_url = base_url.rstrip("/") + "/"
-
+        self.path_mapping = path_mapping
         # Initialize mimetypes
         mimetypes.init()
 
@@ -319,6 +325,10 @@ class FileAccessResource:
             HTTPException: For various error conditions
         """
         try:
+            # Translate path if mapping exists
+            if self.path_mapping:
+                filename = self.path_mapping.translate(filename)
+
             file_path = Path(filename).resolve()
 
             # Check file exists

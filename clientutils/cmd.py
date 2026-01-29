@@ -5,10 +5,11 @@ Command line entry point
 from argparse import ArgumentParser, Namespace
 
 from basemkit.base_cmd import BaseCmd
-
 from clientutils.clipboard import Clipboard
 from clientutils.version import Version
 from clientutils.webserver import ClientUtilsServer
+
+from clientutils.pathmapping import PathMapping
 
 
 class ClientUtilsCmd(BaseCmd):
@@ -55,6 +56,14 @@ class ClientUtilsCmd(BaseCmd):
             choices=["critical", "error", "warning", "info", "debug", "trace"],
             help="uvicorn log level",
         )
+        parser.add_argument(
+            "--path-mapping",
+            dest="path_mapping_yaml_path",
+            default=PathMapping.default_yaml_path(),
+            help="path to YAML path mapping configuration file (e.g. config/path_mappings.yaml)",
+        )
+        return parser
+
         return parser
 
     def handle_args(self, args: Namespace) -> bool:

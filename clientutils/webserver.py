@@ -1,18 +1,22 @@
 """
-ClientUtils Server with clipboard and file access support
+
+ClientUtils Server with clipboard, file access, and path mapping support
+
+WF 2026-01-28 migrated from 2015 Java Jersey RESTful solution
 """
 
 from pathlib import Path
 from typing import Optional
 
-import uvicorn
-from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import Response
-from fastapi.staticfiles import StaticFiles
-
 from clientutils.clipboard import Clipboard
 from clientutils.fileaccess import FileAccessResource, add_file_routes
 from clientutils.version import Version
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import Response
+from fastapi.staticfiles import StaticFiles
+import uvicorn
+
+from clientutils.pathmapping import PathMapping, OSType
 
 
 class ClientUtilsServer:
@@ -35,7 +39,9 @@ class ClientUtilsServer:
         enable_file_access: bool = True,
         icons_dir: Optional[Path] = None,
         external_base_url: Optional[str] = None,
+        path_mapping_yaml_path: Optional[str] = None,
         log_level: str = "info",
+
     ):
         """
         Args:
@@ -44,6 +50,7 @@ class ClientUtilsServer:
             enable_file_access: whether to register file access routes
             icons_dir: optional explicit path to icons directory (Path or str)
             external_base_url: optional base URL for FileAccessResource (overrides host/port)
+            path_mapping_yaml_path: optional path to YAML path mapping configuration
             log_level: uvicorn log level
         """
         self.host = host
@@ -51,7 +58,16 @@ class ClientUtilsServer:
         self.enable_file_access = enable_file_access
         self.icons_dir_override = Path(icons_dir) if icons_dir else None
         self.external_base_url = external_base_url
+        self.path_mapping_yaml_path = path_mapping_yaml_path
         self.log_level = log_level
+        self.path_mapping: Optional[PathMapping] = None
+        self.os_type = OSType.from_platform()
+        if self.path_mapping_yaml_path:
+            try:
+                self.path_mapping = PathMapping.ofYaml(self.path_mapping_yaml_path)
+            except Exception as e:
+                print(f"Warning: failed to load path mapping from '{self.path_mapping_yaml_path}': {e}")
+                self.path_mapping = None
 
         self.app = FastAPI(
             title=Version.name,
@@ -96,7 +112,7 @@ class ClientUtilsServer:
         # Add file access routes if enabled
         if self.enable_file_access:
             base_url = f"http://localhost:{self.port}/"
-            file_resource = FileAccessResource(base_url=base_url)
+            file_resource = FileAccessResource(base_url=base_url,path_mapping=self.path_mapping)
             add_file_routes(self.app, file_resource)
 
         @self.app.get(
