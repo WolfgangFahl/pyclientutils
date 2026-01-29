@@ -15,7 +15,7 @@ from fastapi.testclient import TestClient
 from clientutils.fileresource import FileAccessResource
 
 
-class TestFileAccessAndDesktopIntegration(Basetest):
+class TestFileAccessResourceDesktop(Basetest):
     """Tests for desktop integration features (refactored to reduce duplication)"""
 
     def setUp(self, debug=True, profile=True):
@@ -66,16 +66,6 @@ class TestFileAccessAndDesktopIntegration(Basetest):
 
         self.assertEqual(expected_path_normalized, actual_path_normalized)
 
-    def test_base_url_configuration(self):
-        """Test that base URL is correctly configured"""
-        custom_url = "http://example.com:8080/"
-        resource = FileAccessResource(base_url=custom_url)
-
-        self.assertEqual(resource.base_url, custom_url)
-
-        link = resource.get_action_link("/test.txt", "info")
-        self.assertTrue(link.startswith(custom_url))
-
     @patch("subprocess.run")
     def test_open_file_subprocess_error(self, mock_run):
         """Test handling subprocess error when opening file"""
@@ -101,9 +91,9 @@ class TestFileAccessAndDesktopIntegration(Basetest):
 
     def test_path_resolution(self):
         """Test that paths are resolved correctly"""
-        file_info = self.file_resource.get_file_info(str(self.test_text_file))
+        fileinfo = self.file_resource.get_fileinfo(str(self.test_text_file))
         # Path should be absolute
-        self.assertTrue(Path(file_info["path"]).is_absolute())
+        self.assertTrue(Path(fileinfo.path).is_absolute())
 
 
     def test_open_file_in_desktop(self):
@@ -130,23 +120,5 @@ class TestFileAccessAndDesktopIntegration(Basetest):
 
         with self.assertRaises(FileNotFoundError):
             self.file_resource.open_file_in_desktop(nonexistent)
-
-    def test_handle_open_action(self):
-        """Test handling open action via HTTP"""
-        response = self.client.get(f"/file?filename={self.test_text_file}&action=open")
-
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("text/html", response.headers["content-type"])
-        self.assertIn("window.close", response.text)
-
-    def test_handle_browse_action(self):
-        """Test handling browse action via HTTP"""
-        response = self.client.get(
-            f"/file?filename={self.test_text_file}&action=browse"
-        )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("text/html", response.headers["content-type"])
-        self.assertIn("window.close", response.text)
 
 

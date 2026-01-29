@@ -3,15 +3,15 @@ Created on 2026-01-29
 
 @author: wf
 """
-from datetime import datetime
 import logging
 import mimetypes
 from pathlib import Path
 import platform
 import subprocess
-from typing import Any, Dict, Optional
+from typing import Optional
 
 from clientutils.fileaccess import FileAccess
+from clientutils.fileinfo import FileInfo
 from clientutils.pathmapping import PathMapping
 from fastapi import HTTPException, Query
 from fastapi.responses import FileResponse, HTMLResponse, Response
@@ -23,171 +23,9 @@ logger = logging.getLogger(__name__)
 class FileAccessResource:
     """Handles file access operations via REST endpoints"""
 
-    @staticmethod
-    def _render_default_info(
-        fileinfo: Dict[str, Any],
-        baseurl: str,
-        openiconName: str,
-        downloadlink: str,
-        browselink: str,
-        openlink: str,
-        noheader: bool,
-    ) -> str:
-        """Render default info template using f-strings."""
-
-        icon_html = (
-            f'<img src="{baseurl}fileicon/{openiconName}" class="icon" alt="icon">'
-        )
-
-        table_content = f"""
-        <table class="info-table">
-            <tr>
-                <td>Name:</td>
-                <td>{icon_html}{fileinfo['name']}</td>
-            </tr>
-            <tr>
-                <td>Path:</td>
-                <td>{fileinfo['path']}</td>
-            </tr>
-            <tr>
-                <td>Size:</td>
-                <td>{fileinfo['size_formatted']}</td>
-            </tr>
-            <tr>
-                <td>Modified:</td>
-                <td>{fileinfo['modified']}</td>
-            </tr>
-            <tr>
-                <td>Type:</td>
-                <td>{fileinfo['type']}</td>
-            </tr>
-        </table>
-
-        <div class="actions">
-            <h3>Actions:</h3>
-            <a href="{downloadlink}" class="btn">Download</a>
-            <a href="{browselink}" class="btn">Browse Folder</a>
-            <a href="{openlink}" class="btn">Open File</a>
-        </div>
-        """
-
-        if noheader:
-            return table_content
-
-        return f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="UTF-8">
-        <title>File Info: {fileinfo['name']}</title>
-        <style>
-            body {{ font-family: Arial, sans-serif; margin: 20px; }}
-            .container {{ max-width: 800px; margin: 0 auto; }}
-            .header {{ background: #f0f0f0; padding: 10px; border-radius: 5px; }}
-            .info-table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
-            .info-table td {{ padding: 8px; border-bottom: 1px solid #ddd; }}
-            .info-table td:first-child {{ font-weight: bold; width: 200px; }}
-            .actions {{ margin-top: 20px; }}
-            .btn {{ display: inline-block; padding: 10px 20px; margin: 5px;
-                   background: #007bff; color: white; text-decoration: none;
-                   border-radius: 3px; }}
-            .btn:hover {{ background: #0056b3; }}
-            .icon {{ width: 32px; height: 32px; vertical-align: middle; margin-right: 10px; }}
-        </style>
-    </head>
-    <body>
-    <div class="container">
-        <div class="header">
-            <h1>File Information</h1>
-        </div>
-        {table_content}
-    </div>
-    </body>
-    </html>
-    """
-
-    @staticmethod
-    def _render_short_info(
-        fileinfo: Dict[str, Any],
-        baseurl: str,
-        openiconName: str,
-        downloadlink: str,
-        browselink: str,
-        openlink: str,
-        noheader: bool,
-    ) -> str:
-        """Render short info template matching original FreeMarker template."""
-
-        def icon(name: str, alt: str = None, title: str = None) -> str:
-            alt = alt or name
-            title = title or name
-            return f'<img src="{baseurl}fileicon/{name}" alt="{alt}" title="{title}"/>'
-
-        file_path = Path(fileinfo["path"])
-
-        # Check if file exists
-        if not file_path.exists():
-            error_content = f'<span style="color: #ff0000;" title="{fileinfo["path"]} does not exist">{icon("document_error.png")}{fileinfo["path"]}</span>'
-        else:
-            # Build table content
-            folder_path = str(file_path.parent)
-            file_name = fileinfo["name"]
-            file_size = fileinfo["size_formatted"]
-
-            # Action links for files only
-            action_links = ""
-            if fileinfo["is_file"]:
-                action_links = f'''
-              <td>
-                  <a href="{downloadlink}" title="download {fileinfo['path']}" target="_blank">{icon('document_down.png')}</a>
-                  <a href="{browselink}" title="browse {fileinfo['path']}" target="_blank">{icon('folder_view.png')}</a>
-              </td>'''
-
-            error_content = f'''
-        <table>
-            <tr>
-              <td><a href="{openlink}" title="open {fileinfo['path']}" target="_blank">{icon(openiconName)}</a></td>
-              <td>
-                  <a href="{openlink}" title="open {fileinfo['path']}" target="_blank">
-                      <span style="font-size:12px;vertical-align: top">{folder_path}</span><br>
-                      <span style="font-size:16px;vertical-align: bottom">{file_name}&nbsp;({file_size})</span>
-                  </a>
-              </td>{action_links}
-            </tr>
-        </table>'''
-
-        if noheader:
-            return error_content
-
-        return f'''<html>
-        <head>
-            <title>{fileinfo["name"]}</title>
-        </head>
-        <body>
-    {error_content}
-        </body>
-    </html>'''
-
-    CLOSE_TAB_HTML = """
-<!DOCTYPE html>
-<html>
-<head>
-    <title>File Opened</title>
-</head>
-<body onload="window.close();">
-    <p>File opened. This window will close automatically.</p>
-    <script>
-        setTimeout(function() {
-            window.close();
-        }, 1000);
-    </script>
-</body>
-</html>
-"""
-
     def __init__(self, base_url: str, path_mapping: Optional[PathMapping] = None):
         """
-        construct file access resource.
+        Construct file access resource.
 
         Args:
             base_url: Base URL for the server
@@ -200,106 +38,92 @@ class FileAccessResource:
         # Initialize mimetypes
         mimetypes.init()
 
-    def get_file_info(self, filepath: str) -> Dict[str, Any]:
+    def render_short_info(self) -> str:
         """
-        Get file information as a dictionary.
-
-        Args:
-            filepath: Path to the file
-
-        Returns:
-            Dictionary with file information
-
-        Raises:
-            FileNotFoundError: If file doesn't exist
+        Render short info template matching original FreeMarker template.
         """
-        file_path = Path(filepath).resolve()
+        def icon(name: str, alt: str = None, title: str = None) -> str:
+            """Icon macro equivalent"""
+            alt = alt or name
+            title = title or name
+            return f"<img src='{self.base_url}fileicon/{name}' alt='{alt}' title='{title}'/>"
+        fileinfo=self.fileinfo
+        # Generate action links from fileinfo
+        downloadlink = fileinfo.get_action_link(self.base_url, "download")
+        browselink = fileinfo.get_action_link(self.base_url, "browse")
+        openlink = fileinfo.get_action_link(self.base_url, "open")
+        openiconName = FileAccess.get_icon_name(fileinfo.file_path)
 
-        if not file_path.exists():
-            raise FileNotFoundError(f"File not found: {filepath}")
+        # Get parent folder path
+        folder_path = str(Path(fileinfo.path).parent)
 
-        stat = file_path.stat()
+        # Check if file exists
+        if not Path(fileinfo.path).exists():
+            content = f"<span style=\"color: #ff0000;\" title='{fileinfo.path} does not exist'>{icon('document_error.png')}{fileinfo.path}</span>"
+        else:
+            # Action links for files only
+            action_links = ""
+            if fileinfo.is_file:
+                action_links = f"""
+          <td>
+              <a href="{downloadlink}" title="download {fileinfo.path}" target="_blank">{icon('document_down.png')}</a>
+              <a href="{browselink}"   title="browse {fileinfo.path}" target="_blank">{icon('folder_view.png')}</a>
+          </td>"""
 
-        return {
-            "name": file_path.name,
-            "path": str(file_path),
-            "size": stat.st_size,
-            "size_formatted": self._format_size(stat.st_size),
-            "modified": datetime.fromtimestamp(stat.st_mtime).strftime(
-                "%Y-%m-%d %H:%M:%S"
-            ),
-            "type": "Directory" if file_path.is_dir() else "File",
-            "extension": (
-                file_path.suffix.lstrip(".").lower() if file_path.is_file() else ""
-            ),
-            "is_file": file_path.is_file(),
-            "is_dir": file_path.is_dir(),
-        }
+            content = f"""<table>
+        <tr>
+          <td><a href="{openlink}" title="open {fileinfo.path}" target="_blank">{icon(openiconName)}</a></td>
+          <td>
+              <a href="{openlink}" title="open {fileinfo.path}" target="_blank">
+                  <span style="font-size:12px;vertical-align: top">{folder_path}</span><br>
+                  <span style="font-size:16px;vertical-align: bottom">{fileinfo.name}&nbsp;({fileinfo.size_formatted})</span>
+              </a>
+          </td>{action_links}
+        </tr>
+    </table>"""
 
-    def _format_size(self, size: int) -> str:
-        """Format file size in human-readable format."""
-        for unit in ["B", "KB", "MB", "GB", "TB"]:
-            if size < 1024.0:
-                return f"{size:.2f} {unit}"
-            size /= 1024.0
-        return f"{size:.2f} PB"
+        return content
 
-
-
-    def get_action_link(self, filename: str, action: str) -> str:
+    def render_default_info(self) -> str:
         """
-        Generate action link for a file.
-
-        Args:
-            filename: File path
-            action: Action type (info, download, open, browse)
-
-        Returns:
-            URL for the action
+        Render default info template - calls _render_short_info (no duplication!)
         """
-        from urllib.parse import urlencode
+        # Get shortinfo HTML by calling the other method
+        shortinfo_html = self.render_short_info()
+        fileinfo=self.fileinfo
+        markup = f"""
+<table>
+    <tr><th>Name</th><th>length</th><th>size</th></tr>
+    <tr><td>{fileinfo.name}</td><td>{fileinfo.size}</td><td>{fileinfo.size_formatted}</td></tr>
+    <tr><td>{shortinfo_html}</td></tr>
+</table>
+"""
+        return markup
 
-        params = urlencode({"filename": filename, "action": action})
-        return f"{self.base_url}file?{params}"
+    def get_fileinfo(self,filename:str):
+        # Translate path if mapping exists
+        if self.path_mapping:
+            filename = self.path_mapping.translate(filename)
+
+        file_path = Path(filename).resolve()
+
+        # Create FileInfo object
+        fileinfo = FileInfo(str(file_path))
+        return fileinfo
 
     def render_info(
         self,
-        fileinfo: Dict[str, Any],
         template_name: str = "defaultinfo",
-        noheader: bool = False,
     ) -> str:
         """
         Render file info as HTML.
-
-        Args:
-            fileinfo: File information dictionary
-            template_name: Template to use (defaultinfo or shortinfo)
-            noheader: Whether to omit header
-
-        Returns:
-            Rendered HTML
         """
-        file_path = Path(fileinfo["path"])
-
-        # Prepare common context
-        baseurl = self.base_url
-        openiconName = FileAccess.get_icon_name(file_path)
-        downloadlink = self.get_action_link(fileinfo["path"], "download")
-        browselink = self.get_action_link(fileinfo["path"], "browse")
-        openlink = self.get_action_link(fileinfo["path"], "open")
-
+        # Dispatch to appropriate renderer - they handle their own links!
         if template_name == "shortinfo":
-            return self._render_short_info(fileinfo, baseurl, openiconName, downloadlink, browselink, openlink, noheader)
+            markup=self.render_short_info()
         else:
-            return self._render_default_info(
-                fileinfo,
-                baseurl,
-                openiconName,
-                downloadlink,
-                browselink,
-                openlink,
-                noheader,
-            )
+            markup=self.render_default_info()
+        return markup
 
     def open_file_in_desktop(self, file_path: Path, open_parent: bool = False) -> bool:
         """
@@ -334,7 +158,7 @@ class FileAccessResource:
             raise RuntimeError(f"Failed to open file: {e}")
 
     def handle_file_access(
-        self, filename: str, action: str = "info", noheader: bool = True
+        self, filename: str, action: str = "info"
     ) -> Response:
         """
         Main handler for file access requests.
@@ -342,7 +166,6 @@ class FileAccessResource:
         Args:
             filename: Path to the file
             action: Action to perform (info, shortinfo, open, browse, download)
-            noheader: Whether to omit header in HTML responses
 
         Returns:
             FastAPI Response object
@@ -351,51 +174,45 @@ class FileAccessResource:
             HTTPException: For various error conditions
         """
         try:
-            # Translate path if mapping exists
-            if self.path_mapping:
-                filename = self.path_mapping.translate(filename)
-
-            file_path = Path(filename).resolve()
-
+            self.fileinfo=self.get_fileinfo(filename)
             # Check file exists
-            if not file_path.exists():
-                raise HTTPException(status_code=204, detail="File not found")
+            if not self.fileinfo.exists:
+                raise HTTPException(status_code=404, detail="File not found")
 
             # Handle different actions
             if action == "info":
-                fileinfo = self.get_file_info(str(file_path))
-                html = self.render_info(fileinfo, "defaultinfo", noheader)
+                html = self.render_info("defaultinfo")
                 return HTMLResponse(content=html)
 
             elif action == "shortinfo":
-                fileinfo = self.get_file_info(str(file_path))
-                html = self.render_info(fileinfo, "shortinfo", noheader)
+                html = self.render_info("shortinfo")
                 return HTMLResponse(content=html)
 
             elif action == "download":
-                if not file_path.is_file():
+                if not self.fileinfo.is_file:
                     raise HTTPException(
                         status_code=400, detail="Cannot download directory"
                     )
 
                 # Determine MIME type
-                mime_type, _ = mimetypes.guess_type(str(file_path))
+                mime_type, _ = mimetypes.guess_type(str(self.fileinfo.file_path))
                 if mime_type is None:
                     mime_type = "application/octet-stream"
 
-                return FileResponse(
-                    path=str(file_path),
+                fileresponse=FileResponse(
+                    path=str(self.fileinfo.file_path),
                     media_type=mime_type,
-                    filename=file_path.name,
+                    filename=self.fileinfo.name,
                     headers={
-                        "Content-Disposition": f'attachment; filename="{file_path.name}"',
+                        "Content-Disposition": f'attachment; filename="{self.fileinfo.name}"',
                     },
                 )
+                return fileresponse
 
             elif action == "open":
                 try:
-                    self.open_file_in_desktop(file_path, open_parent=False)
-                    return HTMLResponse(content=self.CLOSE_TAB_HTML)
+                    self.open_file_in_desktop(self.fileinfo.file_path, open_parent=False)
+                    return Response(status_code=204)
                 except RuntimeError as e:
                     raise HTTPException(
                         status_code=500,
@@ -404,8 +221,8 @@ class FileAccessResource:
 
             elif action == "browse":
                 try:
-                    self.open_file_in_desktop(file_path, open_parent=True)
-                    return HTMLResponse(content=self.CLOSE_TAB_HTML)
+                    self.open_file_in_desktop(self.fileinfo.file_path, open_parent=True)
+                    return Response(status_code=204)
                 except RuntimeError as e:
                     raise HTTPException(
                         status_code=500,
@@ -423,8 +240,7 @@ class FileAccessResource:
             logger.error(f"Error handling file access: {e}", exc_info=True)
             raise HTTPException(status_code=500, detail=str(e))
 
-
-    def add_file_routes(self,app):
+    def add_file_routes(self, app):
         """
         Add file access routes to FastAPI application.
 
@@ -436,7 +252,7 @@ class FileAccessResource:
             "/file",
             responses={
                 200: {"description": "File information or download"},
-                204: {"description": "File not found"},
+                204: {"description": "File action completed (open/browse)"},
                 400: {"description": "Invalid request"},
                 404: {"description": "File not found"},
                 500: {"description": "Server error"},
@@ -450,7 +266,6 @@ class FileAccessResource:
                 description="Action to perform",
                 pattern="^(info|shortinfo|open|browse|download)$",
             ),
-            noheader: bool = Query(default=True, description="Omit HTML header"),
         ):
             """
             Access a file with various actions.
@@ -461,4 +276,4 @@ class FileAccessResource:
             - **browse**: Open file's parent directory
             - **download**: Download the file
             """
-            return self.handle_file_access(filename, action, noheader)
+            return self.handle_file_access(filename, action)
