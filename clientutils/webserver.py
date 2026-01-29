@@ -8,7 +8,8 @@ WF 2026-01-28 migrated from 2015 Java Jersey RESTful solution
 from typing import Optional
 
 from clientutils.clipboard import Clipboard
-from clientutils.fileaccess import FileAccessResource, FileAccess
+from clientutils.fileaccess import  FileAccess
+from clientutils.fileresource import FileAccessResource
 from clientutils.pathmapping import PathMapping, OSType
 from clientutils.version import Version
 from fastapi import FastAPI, HTTPException, Query

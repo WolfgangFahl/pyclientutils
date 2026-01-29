@@ -228,5 +228,6 @@ class PathMapping:
         # Target is always current platform
         to_os = OSType.from_platform()
 
-        return self.translate_ospath(filepath, from_os, to_os)
+        target_path = self.translate_ospath(filepath, from_os, to_os)
+        return target_path
 

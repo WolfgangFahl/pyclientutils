@@ -5,14 +5,14 @@ Created on 2026-01-28
 """
 
 from pathlib import Path
-import subprocess
 import tempfile
-from unittest.mock import patch
 
 from basemkit.basetest import Basetest
-from clientutils.fileaccess import FileAccessResource, FileAccess
+from clientutils.fileaccess import FileAccess
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+
+from clientutils.fileresource import FileAccessResource
 
 
 class TestFileAccess(Basetest):
@@ -41,13 +41,14 @@ class TestFileAccess(Basetest):
         self.test_subdir = self.test_dir / "subdir"
         self.test_subdir.mkdir()
 
-        # Initialize FileAccessResource
-        self.file_resource = FileAccessResource(base_url="http://localhost:9998/")
-
-        # Create FastAPI app with routes for HTTP testing
+        self.port = 19998
+        self.file_resource = FileAccessResource(
+            base_url=f"http://localhost:{self.port}/"
+        )
         self.app = FastAPI()
         self.file_resource.add_file_routes(self.app)
         self.client = TestClient(self.app)
+
 
     def tearDown(self):
         # Clean up temporary directory
@@ -285,41 +286,3 @@ class TestFileAccess(Basetest):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content, b"")
 
-    def test_base_url_configuration(self):
-        """Test that base URL is correctly configured"""
-        custom_url = "http://example.com:8080/"
-        resource = FileAccessResource(base_url=custom_url)
-
-        self.assertEqual(resource.base_url, custom_url)
-
-        link = resource.get_action_link("/test.txt", "info")
-        self.assertTrue(link.startswith(custom_url))
-
-    @patch("subprocess.run")
-    def test_open_file_subprocess_error(self, mock_run):
-        """Test handling subprocess error when opening file"""
-        mock_run.side_effect = subprocess.CalledProcessError(1, "cmd")
-
-        with self.assertRaises(RuntimeError):
-            self.file_resource.open_file_in_desktop(self.test_text_file)
-
-    def test_concurrent_requests(self):
-        """Test handling multiple concurrent requests"""
-        import concurrent.futures
-
-        def make_request():
-            return self.client.get(f"/file?filename={self.test_text_file}&action=info")
-
-        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-            futures = [executor.submit(make_request) for _ in range(10)]
-            results = [f.result() for f in futures]
-
-        # All requests should succeed
-        for response in results:
-            self.assertEqual(response.status_code, 200)
-
-    def test_path_resolution(self):
-        """Test that paths are resolved correctly"""
-        file_info = self.file_resource.get_file_info(str(self.test_text_file))
-        # Path should be absolute
-        self.assertTrue(Path(file_info["path"]).is_absolute())

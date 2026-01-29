@@ -12,11 +12,10 @@ from unittest.mock import MagicMock, patch
 from basemkit.basetest import Basetest
 from fastapi.applications import FastAPI
 from fastapi.testclient import TestClient
+from clientutils.fileresource import FileAccessResource
 
-from clientutils.fileaccess import FileAccessResource
 
-
-class TestFileAccessDesktopIntegration(Basetest):
+class TestFileAccessAndDesktopIntegration(Basetest):
     """Tests for desktop integration features (refactored to reduce duplication)"""
 
     def setUp(self, debug=True, profile=True):
@@ -67,6 +66,46 @@ class TestFileAccessDesktopIntegration(Basetest):
 
         self.assertEqual(expected_path_normalized, actual_path_normalized)
 
+    def test_base_url_configuration(self):
+        """Test that base URL is correctly configured"""
+        custom_url = "http://example.com:8080/"
+        resource = FileAccessResource(base_url=custom_url)
+
+        self.assertEqual(resource.base_url, custom_url)
+
+        link = resource.get_action_link("/test.txt", "info")
+        self.assertTrue(link.startswith(custom_url))
+
+    @patch("subprocess.run")
+    def test_open_file_subprocess_error(self, mock_run):
+        """Test handling subprocess error when opening file"""
+        mock_run.side_effect = subprocess.CalledProcessError(1, "cmd")
+
+        with self.assertRaises(RuntimeError):
+            self.file_resource.open_file_in_desktop(self.test_text_file)
+
+    def test_concurrent_requests(self):
+        """Test handling multiple concurrent requests"""
+        import concurrent.futures
+
+        def make_request():
+            return self.client.get(f"/file?filename={self.test_text_file}&action=info")
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            futures = [executor.submit(make_request) for _ in range(10)]
+            results = [f.result() for f in futures]
+
+        # All requests should succeed
+        for response in results:
+            self.assertEqual(response.status_code, 200)
+
+    def test_path_resolution(self):
+        """Test that paths are resolved correctly"""
+        file_info = self.file_resource.get_file_info(str(self.test_text_file))
+        # Path should be absolute
+        self.assertTrue(Path(file_info["path"]).is_absolute())
+
+
     def test_open_file_in_desktop(self):
         """Test opening file in desktop application"""
         result = self.file_resource.open_file_in_desktop(
@@ -110,9 +149,4 @@ class TestFileAccessDesktopIntegration(Basetest):
         self.assertIn("text/html", response.headers["content-type"])
         self.assertIn("window.close", response.text)
 
-    def test_open_file_subprocess_error(self):
-        """Test handling subprocess error when opening file"""
-        self.mock_run.side_effect = subprocess.CalledProcessError(1, "cmd")
 
-        with self.assertRaises(RuntimeError):
-            self.file_resource.open_file_in_desktop(self.test_text_file)
