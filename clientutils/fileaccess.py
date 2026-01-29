@@ -9,36 +9,38 @@ Provides REST endpoints for:
 - Opening files in desktop applications
 - Browsing file directories
 """
-
+import importlib.resources
 from pathlib import Path
 
 class FileAccess:
     """
     File Access
     """
+
     @classmethod
     def get_icons_directory(cls) -> Path:
         """
         Get the path to the icons directory.
-
+    
         Returns:
             Path: Absolute path to the icons directory
-
+    
         Raises:
             FileNotFoundError: If icons directory doesn't exist
         """
-        # Try relative to this file
-        icons_dir = Path(__file__).parent.parent / "clientutils_examples" / "icons"
-
+        try:
+            # Use importlib.resources for packaged distributions
+            with importlib.resources.path('clientutils_examples', 'icons') as icons_path:
+                icons_dir = Path(icons_path)
+        except (ModuleNotFoundError, FileNotFoundError):
+            # Fallback for development
+            icons_dir = Path(__file__).parent.parent / "clientutils_examples" / "icons"
+        
         if not icons_dir.exists():
-            # Try relative to current working directory
-            icons_dir = Path.cwd() / "clientutils_examples" / "icons"
-
-        if not icons_dir.exists():
-            raise FileNotFoundError(f"Icons directory not found. Tried: {icons_dir}")
-
-        return icons_dir.resolve()
-
+            raise FileNotFoundError(f"Icons directory not found at {icons_dir}")
+        
+        return icons_dir
+    
     @classmethod
     def get_icon_name(cls, file_path: Path) -> str:
         """
