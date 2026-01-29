@@ -108,18 +108,65 @@ class FileAccessResource:
 
     @staticmethod
     def _render_short_info(
-        fileinfo: Dict[str, Any], downloadlink: str, browselink: str, openlink: str
+        fileinfo: Dict[str, Any],
+        baseurl: str,
+        openiconName: str,
+        downloadlink: str,
+        browselink: str,
+        openlink: str,
+        noheader: bool,
     ) -> str:
-        """Render short info template using f-strings."""
-        return f"""
-    <div style="padding: 10px; border: 1px solid #ccc; border-radius: 5px; background: #f9f9f9;">
-        <strong>{fileinfo['name']}</strong><br>
-        Size: {fileinfo['size_formatted']}<br>
-        <a href="{downloadlink}">Download</a> |
-        <a href="{browselink}">Browse</a> |
-        <a href="{openlink}">Open</a>
-    </div>
-    """
+        """Render short info template matching original FreeMarker template."""
+
+        def icon(name: str, alt: str = None, title: str = None) -> str:
+            alt = alt or name
+            title = title or name
+            return f'<img src="{baseurl}fileicon/{name}" alt="{alt}" title="{title}"/>'
+
+        file_path = Path(fileinfo["path"])
+
+        # Check if file exists
+        if not file_path.exists():
+            error_content = f'<span style="color: #ff0000;" title="{fileinfo["path"]} does not exist">{icon("document_error.png")}{fileinfo["path"]}</span>'
+        else:
+            # Build table content
+            folder_path = str(file_path.parent)
+            file_name = fileinfo["name"]
+            file_size = fileinfo["size_formatted"]
+
+            # Action links for files only
+            action_links = ""
+            if fileinfo["is_file"]:
+                action_links = f'''
+              <td>
+                  <a href="{downloadlink}" title="download {fileinfo['path']}" target="_blank">{icon('document_down.png')}</a>
+                  <a href="{browselink}" title="browse {fileinfo['path']}" target="_blank">{icon('folder_view.png')}</a>
+              </td>'''
+
+            error_content = f'''
+        <table>
+            <tr>
+              <td><a href="{openlink}" title="open {fileinfo['path']}" target="_blank">{icon(openiconName)}</a></td>
+              <td>
+                  <a href="{openlink}" title="open {fileinfo['path']}" target="_blank">
+                      <span style="font-size:12px;vertical-align: top">{folder_path}</span><br>
+                      <span style="font-size:16px;vertical-align: bottom">{file_name}&nbsp;({file_size})</span>
+                  </a>
+              </td>{action_links}
+            </tr>
+        </table>'''
+
+        if noheader:
+            return error_content
+
+        return f'''<html>
+        <head>
+            <title>{fileinfo["name"]}</title>
+        </head>
+        <body>
+    {error_content}
+        </body>
+    </html>'''
 
     CLOSE_TAB_HTML = """
 <!DOCTYPE html>
@@ -242,7 +289,7 @@ class FileAccessResource:
         openlink = self.get_action_link(fileinfo["path"], "open")
 
         if template_name == "shortinfo":
-            return self._render_short_info(fileinfo, downloadlink, browselink, openlink)
+            return self._render_short_info(fileinfo, baseurl, openiconName, downloadlink, browselink, openlink, noheader)
         else:
             return self._render_default_info(
                 fileinfo,
