@@ -9,14 +9,14 @@ from pathlib import Path
 from typing import Optional
 
 from clientutils.clipboard import Clipboard
-from clientutils.fileaccess import FileAccessResource, add_file_routes
+from clientutils.fileaccess import FileAccessResource, add_file_routes, \
+    FileAccess
+from clientutils.pathmapping import PathMapping, OSType
 from clientutils.version import Version
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 import uvicorn
-
-from clientutils.pathmapping import PathMapping, OSType
 
 
 class ClientUtilsServer:
@@ -37,7 +37,6 @@ class ClientUtilsServer:
         host: str = "0.0.0.0",
         port: int = 9998,
         enable_file_access: bool = True,
-        icons_dir: Optional[Path] = None,
         external_base_url: Optional[str] = None,
         path_mapping_yaml_path: Optional[str] = None,
         log_level: str = "info",
@@ -48,7 +47,6 @@ class ClientUtilsServer:
             host: the host/iface to bind (default "0.0.0.0")
             port: the port to listen on (default 9998)
             enable_file_access: whether to register file access routes
-            icons_dir: optional explicit path to icons directory (Path or str)
             external_base_url: optional base URL for FileAccessResource (overrides host/port)
             path_mapping_yaml_path: optional path to YAML path mapping configuration
             log_level: uvicorn log level
@@ -56,7 +54,6 @@ class ClientUtilsServer:
         self.host = host
         self.port = port
         self.enable_file_access = enable_file_access
-        self.icons_dir_override = Path(icons_dir) if icons_dir else None
         self.external_base_url = external_base_url
         self.path_mapping_yaml_path = path_mapping_yaml_path
         self.log_level = log_level
@@ -76,32 +73,10 @@ class ClientUtilsServer:
         )
         self._setup_routes()
 
-    def get_icons_directory(self) -> Path:
-        """
-        Get the path to the icons directory.
-
-        Returns:
-            Path: Absolute path to the icons directory
-
-        Raises:
-            FileNotFoundError: If icons directory doesn't exist
-        """
-        # Try relative to this file
-        icons_dir = Path(__file__).parent.parent / "clientutils_examples" / "icons"
-
-        if not icons_dir.exists():
-            # Try relative to current working directory
-            icons_dir = Path.cwd() / "clientutils_examples" / "icons"
-
-        if not icons_dir.exists():
-            raise FileNotFoundError(f"Icons directory not found. Tried: {icons_dir}")
-
-        return icons_dir.resolve()
-
     def _setup_routes(self):
         """Configure routes for static file serving, clipboard access, and file operations"""
         try:
-            icons_dir = self.get_icons_directory()
+            icons_dir = FileAccess.get_icons_directory()
             # Mount static files - automatically handles file serving and closing
             self.app.mount(
                 "/fileicon", StaticFiles(directory=str(icons_dir)), name="fileicon"

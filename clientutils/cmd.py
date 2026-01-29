@@ -38,12 +38,6 @@ class ClientUtilsCmd(BaseCmd):
             help="disable file access routes",
         )
         parser.add_argument(
-            "--icons-dir",
-            dest="icons_dir",
-            default=None,
-            help="path to icons directory",
-        )
-        parser.add_argument(
             "--external-base-url",
             dest="external_base_url",
             default=None,
@@ -80,7 +74,6 @@ class ClientUtilsCmd(BaseCmd):
                 host=args.host,
                 port=args.port,
                 enable_file_access=enable_file_access,
-                icons_dir=args.icons_dir,
                 external_base_url=args.external_base_url,
                 log_level=args.log_level,
             )

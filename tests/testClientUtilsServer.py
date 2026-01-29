@@ -4,15 +4,15 @@ Created on 2026-01-28
 @author: wf
 """
 
-import os
 from io import BytesIO
+import os
 
-from basemkit.basetest import Basetest
-from fastapi.testclient import TestClient
 from PIL import Image
-
+from basemkit.basetest import Basetest
 from clientutils.clipboard import Clipboard
+from clientutils.fileaccess import FileAccess
 from clientutils.webserver import ClientUtilsServer
+from fastapi.testclient import TestClient
 
 
 class TestClientUtilsServer(Basetest):
@@ -30,7 +30,7 @@ class TestClientUtilsServer(Basetest):
             self._original_clipboard = Clipboard.paste()
         except:
             self._original_clipboard = None
-        icon_dir = self.server.get_icons_directory()
+        icon_dir = FileAccess.get_icons_directory()
         test_image_path = f"{icon_dir}/xls32x32.png"
         self.assertTrue(os.path.isfile(test_image_path))
         # Load as PIL Image first and copy to clipboard
@@ -54,7 +54,7 @@ class TestClientUtilsServer(Basetest):
 
     def test_get_icons_directory(self):
         """Test the get_icons_directory method"""
-        icons_dir = self.server.get_icons_directory()
+        icons_dir = FileAccess.get_icons_directory()
         self.assertTrue(icons_dir.exists())
         self.assertTrue(icons_dir.is_dir())
         # Check for expected icon files
