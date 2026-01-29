@@ -29,16 +29,6 @@ class FileAccess:
         Raises:
             FileNotFoundError: If icons directory doesn't exist
         """
-        try:
-            icons_trav = files("clientutils_examples").joinpath("icons")
-            # Convert to concrete Path - this works if icons is a real directory in the package
-            icons_dir = Path(str(icons_trav))
-            if icons_dir.exists():
-                return icons_dir
-        except (ModuleNotFoundError, FileNotFoundError, TypeError):
-            pass
-
-        # Fallback for development
         icons_dir = Path(__file__).parent.parent / "clientutils_examples" / "icons"
 
         if not icons_dir.exists():

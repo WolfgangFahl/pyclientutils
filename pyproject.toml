@@ -61,7 +61,7 @@ Home = "https://github.com/WolfgangFahl/pyclientutils"
 
 
 [tool.hatch.build.targets.wheel]
-only-include = ["clientutils"]
+only-include = ["clientutils","clientutils_examples"]
 
 [tool.hatch.build.targets.wheel.sources]
 "clientutils" = "clientutils"
