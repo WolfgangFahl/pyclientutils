@@ -10,11 +10,10 @@ import tempfile
 from basemkit.basetest import Basetest
 from clientutils.fileaccess import FileAccess
 from clientutils.fileinfo import FileInfo
+from clientutils.fileresource import FileAccessResource
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-
-from clientutils.fileresource import FileAccessResource
-
+from unittest.mock import MagicMock, patch
 
 class TestFileAccess(Basetest):
     """
@@ -48,6 +47,11 @@ class TestFileAccess(Basetest):
         self.app = FastAPI()
         self.file_resource.add_file_routes(self.app)
         self.client = TestClient(self.app)
+        self.subprocess_patch = patch(
+            "subprocess.run", return_value=MagicMock(returncode=0)
+        )
+        self.mock_run = self.subprocess_patch.start()
+
 
     def tearDown(self):
         # Clean up temporary directory
