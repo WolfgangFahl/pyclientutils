@@ -9,7 +9,7 @@ Provides REST endpoints for:
 - Opening files in desktop applications
 - Browsing file directories
 """
-import importlib.resources
+from importlib.resources import files, as_file
 from pathlib import Path
 
 class FileAccess:
@@ -17,30 +17,35 @@ class FileAccess:
     File Access
     """
 
+
     @classmethod
     def get_icons_directory(cls) -> Path:
         """
         Get the path to the icons directory.
-    
+
         Returns:
             Path: Absolute path to the icons directory
-    
+
         Raises:
             FileNotFoundError: If icons directory doesn't exist
         """
         try:
-            # Use importlib.resources for packaged distributions
-            with importlib.resources.path('clientutils_examples', 'icons') as icons_path:
-                icons_dir = Path(icons_path)
-        except (ModuleNotFoundError, FileNotFoundError):
-            # Fallback for development
-            icons_dir = Path(__file__).parent.parent / "clientutils_examples" / "icons"
-        
+            icons_trav = files("clientutils_examples").joinpath("icons")
+            # Convert to concrete Path - this works if icons is a real directory in the package
+            icons_dir = Path(str(icons_trav))
+            if icons_dir.exists():
+                return icons_dir
+        except (ModuleNotFoundError, FileNotFoundError, TypeError):
+            pass
+
+        # Fallback for development
+        icons_dir = Path(__file__).parent.parent / "clientutils_examples" / "icons"
+
         if not icons_dir.exists():
             raise FileNotFoundError(f"Icons directory not found at {icons_dir}")
-        
+
         return icons_dir
-    
+
     @classmethod
     def get_icon_name(cls, file_path: Path) -> str:
         """
