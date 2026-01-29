@@ -42,5 +42,8 @@ jobs:
         scripts/install
 
     - name: Run tests
-      run: |
-          scripts/test
+      # see https://github.com/marketplace/actions/setup-xvfb
+      # avoid copykitten.CopykittenError: Clipboard was never initialized.
+      uses: coactions/setup-xvfb@v1
+      with:
+        run: scripts/test
