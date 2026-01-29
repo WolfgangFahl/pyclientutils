@@ -38,6 +38,10 @@ class FileAccessResource:
         # Initialize mimetypes
         mimetypes.init()
 
+    def create_link(self, link, title, text):
+        link_markup = f"""<a href="{link}" title="{title}" target="_blank">{text}</a>"""
+        return link_markup
+
     def render_short_info(self) -> str:
         """
         Render short info template matching original FreeMarker template.
@@ -46,8 +50,11 @@ class FileAccessResource:
             """Icon macro equivalent"""
             alt = alt or name
             title = title or name
-            return f"<img src='{self.base_url}fileicon/{name}' alt='{alt}' title='{title}'/>"
-        fileinfo=self.fileinfo
+            icon_img= f"<img src='{self.base_url}fileicon/{name}' alt='{alt}' title='{title}'/>"
+            return icon_img
+
+        fileinfo = self.fileinfo
+
         # Generate action links from fileinfo
         downloadlink = fileinfo.get_action_link(self.base_url, "download")
         browselink = fileinfo.get_action_link(self.base_url, "browse")
@@ -59,28 +66,35 @@ class FileAccessResource:
 
         # Check if file exists
         if not Path(fileinfo.path).exists():
-            content = f"<span style=\"color: #ff0000;\" title='{fileinfo.path} does not exist'>{icon('document_error.png')}{fileinfo.path}</span>"
+            error_text = f"{icon('document_error.png')}{fileinfo.path}"
+            content = f"<span style=\"color: #ff0000;\" title='{fileinfo.path} does not exist'>{error_text}</span>"
         else:
             # Action links for files only
             action_links = ""
             if fileinfo.is_file:
-                action_links = f"""
-          <td>
-              <a href="{downloadlink}" title="download {fileinfo.path}" target="_blank">{icon('document_down.png')}</a>
-              <a href="{browselink}"   title="browse {fileinfo.path}" target="_blank">{icon('folder_view.png')}</a>
-          </td>"""
+                download_icon = icon('document_down.png')
+                browse_icon = icon('folder_view.png')
+                download_link = self.create_link(downloadlink, f"download {fileinfo.path}", download_icon)
+                browse_link = self.create_link(browselink, f"browse {fileinfo.path}", browse_icon)
 
-            content = f"""<table>
-        <tr>
-          <td><a href="{openlink}" title="open {fileinfo.path}" target="_blank">{icon(openiconName)}</a></td>
-          <td>
-              <a href="{openlink}" title="open {fileinfo.path}" target="_blank">
-                  <span style="font-size:12px;vertical-align: top">{folder_path}</span><br>
-                  <span style="font-size:16px;vertical-align: bottom">{fileinfo.name}&nbsp;({fileinfo.size_formatted})</span>
-              </a>
-          </td>{action_links}
-        </tr>
-    </table>"""
+                action_links = f"""<td>{download_link}{browse_link}</td>"""
+
+            folder_span = f"""<span style="font-size:12px;vertical-align: top">{folder_path}</span>"""
+            file_span = f"""<span style="font-size:16px;vertical-align: bottom">{fileinfo.name}&nbsp;({fileinfo.size_formatted})</span>"""
+
+            # Create the main open link
+            open_icon = icon(openiconName)
+            open_link_content = f"{folder_span}<br>{file_span}"
+            open_icon_link = self.create_link(openlink, f"open {fileinfo.path}", open_icon)
+            open_content_link = self.create_link(openlink, f"open {fileinfo.path}", open_link_content)
+
+            content = f"""<table class='wikitable' style='margin:auto text-align:left'>
+            <tr>
+              <td>{open_icon_link}</td>
+              <td>{open_content_link}</td>
+              {action_links}
+            </tr>
+        </table>"""
 
         return content
 
