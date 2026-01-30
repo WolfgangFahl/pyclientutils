@@ -8,6 +8,25 @@ from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlencode
 
+class Link:
+    """
+    Link creation helper
+    """
+    @classmethod
+    def create(cls, link: str, title: str, text: str) -> str:
+        """Return HTML link markup with target=_blank.
+
+        Args:
+            link: URL destination (href attribute)
+            title: Tooltip text on hover (title attribute)
+            text: Visible clickable text
+
+        Returns:
+            HTML anchor tag with specified attributes
+        """
+        link_markup= f'<a href="{link}" title="{title}" target="_blank">{text}</a>'
+        return link_markup
+
 @dataclass
 class FileInfo:
     """
@@ -100,7 +119,7 @@ class FileInfo:
         check = self._file_path.is_dir()
         return check
 
-    def get_action_link(self, base_url: str, action: str) -> str:
+    def get_action_url(self, base_url: str, action: str) -> str:
         """
         Generate action link for this file.
 
@@ -112,5 +131,5 @@ class FileInfo:
             URL for the action
         """
         params = urlencode({"filename": self.path, "action": action})  # Use self.path!
-        link = f"{base_url}file?{params}"
-        return link
+        url = f"{base_url}file?{params}"
+        return url

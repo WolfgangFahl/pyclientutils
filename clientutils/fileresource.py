@@ -11,7 +11,7 @@ import subprocess
 from typing import Optional
 
 from clientutils.fileaccess import FileAccess
-from clientutils.fileinfo import FileInfo
+from clientutils.fileinfo import FileInfo, Link
 from clientutils.pathmapping import PathMapping
 from fastapi import HTTPException, Query
 from fastapi.responses import FileResponse, HTMLResponse, Response
@@ -38,10 +38,6 @@ class FileAccessResource:
         # Initialize mimetypes
         mimetypes.init()
 
-    def create_link(self, link, title, text):
-        link_markup = f"""<a href="{link}" title="{title}" target="_blank">{text}</a>"""
-        return link_markup
-
     def render_short_info(self) -> str:
         """
         Render short info template matching original FreeMarker template.
@@ -56,9 +52,9 @@ class FileAccessResource:
         fileinfo = self.fileinfo
 
         # Generate action links from fileinfo
-        downloadlink = fileinfo.get_action_link(self.base_url, "download")
-        browselink = fileinfo.get_action_link(self.base_url, "browse")
-        openlink = fileinfo.get_action_link(self.base_url, "open")
+        download_url = fileinfo.get_action_url(self.base_url, "download")
+        browse_url = fileinfo.get_action_url(self.base_url, "browse")
+        open_url = fileinfo.get_action_url(self.base_url, "open")
         openiconName = FileAccess.get_icon_name(fileinfo.file_path)
 
         # Get parent folder path
@@ -74,8 +70,8 @@ class FileAccessResource:
             if fileinfo.is_file:
                 download_icon = icon('document_down.png')
                 browse_icon = icon('folder_view.png')
-                download_link = self.create_link(downloadlink, f"download {fileinfo.path}", download_icon)
-                browse_link = self.create_link(browselink, f"browse {fileinfo.path}", browse_icon)
+                download_link = Link.create(download_url, f"download {fileinfo.path}", download_icon)
+                browse_link = Link.create(browse_url, f"browse {fileinfo.path}", browse_icon)
 
                 action_links = f"""<td>{download_link}{browse_link}</td>"""
 
@@ -85,8 +81,8 @@ class FileAccessResource:
             # Create the main open link
             open_icon = icon(openiconName)
             open_link_content = f"{folder_span}<br>{file_span}"
-            open_icon_link = self.create_link(openlink, f"open {fileinfo.path}", open_icon)
-            open_content_link = self.create_link(openlink, f"open {fileinfo.path}", open_link_content)
+            open_icon_link = Link.create(open_url, f"open {fileinfo.path}", open_icon)
+            open_content_link = Link.create(open_url, f"open {fileinfo.path}", open_link_content)
 
             content = f"""<table class='wikitable' style='margin:auto text-align:left'>
             <tr>
@@ -99,22 +95,88 @@ class FileAccessResource:
         return content
 
     def render_default_info(self) -> str:
-        """
-        Render default info template - calls _render_short_info (no duplication!)
-        """
-        # Get shortinfo HTML by calling the other method
-        shortinfo_html = self.render_short_info()
-        fileinfo=self.fileinfo
-        markup = f"""
-<table>
-    <tr><th>Name</th><th>length</th><th>size</th></tr>
-    <tr><td>{fileinfo.name}</td><td>{fileinfo.size}</td><td>{fileinfo.size_formatted}</td></tr>
-    <tr><td>{shortinfo_html}</td></tr>
-</table>
-"""
-        return markup
+            """
+            Render default info with simple, clean styling
+            """
+            shortinfo_html = self.render_short_info()
+            fileinfo = self.fileinfo
+            server=self.path_mapping.mount_config.server
+            server_url=f"{server}/{self.filename}"
+            server_link=Link.create(server_url, f"open on {server}", self.filename)
+
+            markup=f"""<!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>File Info</title>
+            <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+            <style>
+                :root {{
+                    --primary-color: #4752C4;
+                    --text-light: white;
+                    --border-width: 3px;
+                    --spacing-medium: 10px;
+                    --radius-medium: 8px;
+                }}
+
+                body {{
+                    font-family: Arial, sans-serif;
+                    padding: 20px;
+                }}
+
+                .info-table {{
+                    border: var(--border-width) solid var(--primary-color);
+                    border-radius: var(--radius-medium);
+                    border-spacing: 0;
+                    border-collapse: separate;
+                    width: 100%;
+                    max-width: 600px;
+                    overflow: hidden;
+                }}
+
+                .info-table th,
+                .info-table td {{
+                    padding: var(--spacing-medium);
+                    text-align: left;
+                }}
+
+                .info-table th {{
+                    background-color: var(--primary-color);
+                    color: var(--text-light);
+                }}
+
+                .link-button {{
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                    color: var(--text-light);
+                    text-decoration: none;
+                }}
+            </style>
+        </head>
+        <body>
+            <table class="info-table">
+                <tr>
+                    <th>
+                        <a href="https://github.com/WolfgangFahl/pyclientutils" class="link-button" target="_blank">
+                            <span class="material-icons">memory</span>GITHUB
+                        </a>
+                    </th>
+                </tr>
+                <tr><td>{shortinfo_html}</td></tr>
+                 <tr><td>{server_link}</td></tr>
+                <tr><td>{fileinfo.path}</td></tr>
+            </table>
+        </body>
+        </html>"""
+            return markup
 
     def get_fileinfo(self,filename:str):
+        """
+        get the file info for the given filename
+        """
+        self.filename=filename
         # Translate path if mapping exists
         if self.path_mapping:
             filename = self.path_mapping.translate(filename)
@@ -171,6 +233,27 @@ class FileAccessResource:
         except subprocess.CalledProcessError as e:
             raise RuntimeError(f"Failed to open file: {e}")
 
+    def handle_file_open_action(self, open_parent: bool = False) -> Response:
+        """
+        Handle file open/browse action and return appropriate response.
+
+        Args:
+            open_parent: If True, open parent directory instead of file
+
+        Returns:
+            Response with either HTML info or 204 status
+        """
+        info_html= self.render_info("defaultinfo")
+        status_code=200
+        try:
+            self.open_file_in_desktop(self.fileinfo.file_path, open_parent=open_parent)
+            # After successful open, return file info instead of empty 204
+        except Exception as e:
+            info_html+= f"<p style='color: red;'>Failed to open: {e}</p>"
+            status_code=500
+        response=HTMLResponse(content=info_html, status_code=status_code)
+        return response
+
     def handle_file_access(
         self, filename: str, action: str = "info"
     ) -> Response:
@@ -224,24 +307,10 @@ class FileAccessResource:
                 return fileresponse
 
             elif action == "open":
-                try:
-                    self.open_file_in_desktop(self.fileinfo.file_path, open_parent=False)
-                    return Response(status_code=204)
-                except RuntimeError as e:
-                    raise HTTPException(
-                        status_code=500,
-                        detail=f"Server may be running in headless mode or file opening failed: {e}",
-                    )
+                return self.handle_file_open_action(open_parent=False)
 
             elif action == "browse":
-                try:
-                    self.open_file_in_desktop(self.fileinfo.file_path, open_parent=True)
-                    return Response(status_code=204)
-                except RuntimeError as e:
-                    raise HTTPException(
-                        status_code=500,
-                        detail=f"Server may be running in headless mode or directory browsing failed: {e}",
-                    )
+                return self.handle_file_open_action(open_parent=True)
 
             else:
                 raise HTTPException(status_code=400, detail=f"Invalid action: {action}")
