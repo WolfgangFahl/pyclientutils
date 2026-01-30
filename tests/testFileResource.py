@@ -91,7 +91,7 @@ class TestFileAccessResourceDesktop(Basetest):
 
     def test_path_resolution(self):
         """Test that paths are resolved correctly"""
-        fileinfo = self.file_resource.get_fileinfo(str(self.test_text_file))
+        fileinfo = self.file_resource.get_fileinfo(self.test_text_file)
         # Path should be absolute
         self.assertTrue(Path(fileinfo.path).is_absolute())
 

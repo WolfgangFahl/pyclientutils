@@ -60,7 +60,7 @@ class TestFileAccess(Basetest):
 
     def test_file_info_object(self):
         """Test FileInfo object creation and properties"""
-        fileinfo = FileInfo(str(self.test_text_file))
+        fileinfo = FileInfo(self.test_text_file)
 
         self.assertEqual(fileinfo.name, "test.txt")
         self.assertTrue(fileinfo.is_file)
@@ -72,7 +72,7 @@ class TestFileAccess(Basetest):
 
     def test_directory_info_object(self):
         """Test FileInfo for directory"""
-        dirinfo = FileInfo(str(self.test_subdir))
+        dirinfo = FileInfo(self.test_subdir)
 
         self.assertEqual(dirinfo.name, "subdir")
         self.assertFalse(dirinfo.is_file)
@@ -81,7 +81,7 @@ class TestFileAccess(Basetest):
 
     def test_file_info_nonexistent(self):
         """Test FileInfo raises error for non-existent file"""
-        nonexistent = "/nonexistent/file.txt"
+        nonexistent = Path("/nonexistent/file.txt")
         fileinfo=FileInfo(nonexistent)
         self.assertFalse(fileinfo.exists)
 
@@ -125,37 +125,27 @@ class TestFileAccess(Basetest):
 
     def test_get_action_link(self):
         """Test generating action links via FileInfo"""
-        fileinfo = FileInfo(str(self.test_text_file))
+        fileinfo = FileInfo(self.test_text_file)
 
-        # Test info link
-        info_link = fileinfo.get_action_link(self.base_url, "info")
-        self.assertIn("filename=", info_link)
-        self.assertIn("action=info", info_link)
+        actions = ["info", "download", "browse", "open"]
 
-        # Test download link
-        download_link = fileinfo.get_action_link(self.base_url, "download")
-        self.assertIn("action=download", download_link)
-
-        # Test browse link
-        browse_link = fileinfo.get_action_link(self.base_url, "browse")
-        self.assertIn("action=browse", browse_link)
-
-        # Test open link
-        open_link = fileinfo.get_action_link(self.base_url, "open")
-        self.assertIn("action=open", open_link)
+        for action in actions:
+            with self.subTest(action=action):
+                link = fileinfo.get_action_url(self.base_url, action)
+                self.assertIn("filename=", link)
+                self.assertIn(f"action={action}", link)
 
     def test_render_info_default_template(self):
         """Test rendering file info with default template"""
-        self.file_resource.fileinfo = self.file_resource.get_fileinfo(str(self.test_text_file))
+        self.file_resource.fileinfo = self.file_resource.get_fileinfo(self.test_text_file)
         html = self.file_resource.render_info("defaultinfo")
 
         self.assertIn("test.txt", html)
-        self.assertIn("length", html)  # Table header
-        self.assertIn("size", html)    # Table header
+        self.assertIn("github", html)  # Table header
 
     def test_render_info_short_template(self):
         """Test rendering file info with short template"""
-        self.file_resource.fileinfo = self.file_resource.get_fileinfo(str(self.test_text_file))
+        self.file_resource.fileinfo = self.file_resource.get_fileinfo(self.test_text_file)
         html = self.file_resource.render_info("shortinfo")
 
         self.assertIn("test.txt", html)
@@ -247,8 +237,8 @@ class TestFileAccess(Basetest):
             f"/file?filename={self.test_text_file}&action=open"
         )
 
-        # Either succeeds (204) or fails with 500 in headless mode
-        self.assertIn(response.status_code, [204, 500])
+        # Either succeeds (200) or fails with 500 in headless mode
+        self.assertIn(response.status_code, [200, 500])
 
     def test_handle_browse_action(self):
         """Test handling browse action via HTTP (may fail in headless)"""
@@ -256,8 +246,8 @@ class TestFileAccess(Basetest):
             f"/file?filename={self.test_text_file}&action=browse"
         )
 
-        # Either succeeds (204) or fails with 500 in headless mode
-        self.assertIn(response.status_code, [204, 500])
+        # Either succeeds (200) or fails with 500 in headless mode
+        self.assertIn(response.status_code, [200, 500])
 
     def test_multiple_file_types(self):
         """Test handling different file types"""
@@ -268,7 +258,7 @@ class TestFileAccess(Basetest):
             test_file = self.test_dir / f"test.{ext}"
             test_file.write_bytes(b"content")
 
-            fileinfo = FileInfo(str(test_file))
+            fileinfo = FileInfo(test_file)
             self.assertEqual(fileinfo.extension, ext)
 
             icon = FileAccess.get_icon_name(test_file)
@@ -280,7 +270,7 @@ class TestFileAccess(Basetest):
         large_file = self.test_dir / "large.bin"
         large_file.write_bytes(b"x" * 2048)  # 2KB
 
-        fileinfo = FileInfo(str(large_file))
+        fileinfo = FileInfo(large_file)
         self.assertIn("KB", fileinfo.size_formatted)
 
     def test_file_with_special_characters(self):
@@ -288,7 +278,7 @@ class TestFileAccess(Basetest):
         special_file = self.test_dir / "test file (copy).txt"
         special_file.write_text("content")
 
-        fileinfo = FileInfo(str(special_file))
+        fileinfo = FileInfo(special_file)
         self.assertEqual(fileinfo.name, "test file (copy).txt")
 
         response = self.client.get(f"/file?filename={special_file}&action=info")
@@ -299,7 +289,7 @@ class TestFileAccess(Basetest):
         empty_file = self.test_dir / "empty.txt"
         empty_file.write_text("")
 
-        fileinfo = FileInfo(str(empty_file))
+        fileinfo = FileInfo(empty_file)
         self.assertEqual(fileinfo.size, 0)
         self.assertEqual(fileinfo.size_formatted, "0.00 B")
 

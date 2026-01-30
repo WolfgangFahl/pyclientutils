@@ -70,17 +70,16 @@ class FileAccessResource:
             if fileinfo.is_file:
                 download_icon = icon('document_down.png')
                 browse_icon = icon('folder_view.png')
-                download_link = Link.create(download_url, f"download {fileinfo.path}", download_icon)
-                browse_link = Link.create(browse_url, f"browse {fileinfo.path}", browse_icon)
+                download_link = Link.create(download_url, f"download {fileinfo.filename}", download_icon)
+                browse_link = Link.create(browse_url, f"browse {fileinfo.filename}", browse_icon)
 
                 action_links = f"""<td>{download_link}{browse_link}</td>"""
 
-            folder_span = f"""<span style="font-size:12px;vertical-align: top">{folder_path}</span>"""
             file_span = f"""<span style="font-size:16px;vertical-align: bottom">{fileinfo.name}&nbsp;({fileinfo.size_formatted})</span>"""
 
             # Create the main open link
             open_icon = icon(openiconName)
-            open_link_content = f"{folder_span}<br>{file_span}"
+            open_link_content = f"{file_span}"
             open_icon_link = Link.create(open_url, f"open {fileinfo.path}", open_icon)
             open_content_link = Link.create(open_url, f"open {fileinfo.path}", open_link_content)
 
@@ -100,10 +99,18 @@ class FileAccessResource:
             """
             shortinfo_html = self.render_short_info()
             fileinfo = self.fileinfo
-            server=self.path_mapping.mount_config.server
-            server_url=f"{server}/{self.filename}"
-            server_link=Link.create(server_url, f"open on {server}", self.filename)
-
+            server_row=""
+            wiki_row=""
+            if self.path_mapping:
+                server=self.path_mapping.mount_config.server
+                server_url=f"https://{server}{fileinfo.filename}"
+                server_link=Link.create(server_url, f"open on {server}", fileinfo.filename)
+                server_row=f"<tr><td>{server_link}</td></tr>"
+                pme=self.path_mapping.get_mapping_for_path(fileinfo.filename)
+                if pme:
+                    relname=fileinfo.filename.removeprefix("/"+pme.name)
+                    wiki_markup=f"{{{{File|{pme.name}|{relname}}}}}"
+                    wiki_row=f"<tr><td><pre>{wiki_markup}</pre></td></tr>"
             markup=f"""<!DOCTYPE html>
         <html lang="en">
         <head>
@@ -165,7 +172,8 @@ class FileAccessResource:
                     </th>
                 </tr>
                 <tr><td>{shortinfo_html}</td></tr>
-                 <tr><td>{server_link}</td></tr>
+                {server_row}
+                {wiki_row}
                 <tr><td>{fileinfo.path}</td></tr>
             </table>
         </body>
@@ -176,15 +184,15 @@ class FileAccessResource:
         """
         get the file info for the given filename
         """
-        self.filename=filename
+        file_path=filename
         # Translate path if mapping exists
         if self.path_mapping:
-            filename = self.path_mapping.translate(filename)
+            file_path = self.path_mapping.translate(filename)
 
-        file_path = Path(filename).resolve()
+        file_path = Path(file_path).resolve()
 
         # Create FileInfo object
-        fileinfo = FileInfo(str(file_path))
+        fileinfo = FileInfo(file_path=file_path,filename=filename)
         return fileinfo
 
     def render_info(

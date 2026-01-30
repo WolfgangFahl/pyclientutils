@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlencode
-
+from typing import Optional
 class Link:
     """
     Link creation helper
@@ -32,8 +32,8 @@ class FileInfo:
     """
     Object-oriented representation of file system information.
     """
-    path: str
-    _file_path: Path = field(init=False, repr=False)
+    file_path: Path
+    filename: Optional[str]=None
     _stat: object = field(init=False, repr=False)
     _exist: bool = field(init=False, repr=False)
 
@@ -41,23 +41,19 @@ class FileInfo:
         """
         Initialize internal state and validate file existence.
         """
-        self._file_path = Path(self.path).resolve()
-
-        self._exists=self._file_path.exists()
+        if self.filename is None:
+            self.filename=self.file_path.name
+        self._exists=self.file_path.exists()
         if not self._exists:
             return
 
-        self._stat = self._file_path.stat()
+        self._stat = self.file_path.stat()
         # Ensure the exposed path is the resolved string, matching original dictionary behavior
-        self.path = str(self._file_path)
-
-    @property
-    def file_path(self)->Path:
-        return self._file_path
+        self.path = str(self.file_path)
 
     @property
     def name(self) -> str:
-        name = self._file_path.name
+        name = self.file_path.name
         return name
 
     @property
@@ -97,26 +93,26 @@ class FileInfo:
 
     @property
     def type(self) -> str:
-        file_type = "Directory" if self._file_path.is_dir() else "File"
+        file_type = "Directory" if self.file_path.is_dir() else "File"
         return file_type
 
     @property
     def extension(self) -> str:
         ext = (
-            self._file_path.suffix.lstrip(".").lower()
-            if self._file_path.is_file()
+            self.file_path.suffix.lstrip(".").lower()
+            if self.file_path.is_file()
             else ""
         )
         return ext
 
     @property
     def is_file(self) -> bool:
-        check = self._file_path.is_file()
+        check = self.file_path.is_file()
         return check
 
     @property
     def is_dir(self) -> bool:
-        check = self._file_path.is_dir()
+        check = self.file_path.is_dir()
         return check
 
     def get_action_url(self, base_url: str, action: str) -> str:
@@ -130,6 +126,6 @@ class FileInfo:
         Returns:
             URL for the action
         """
-        params = urlencode({"filename": self.path, "action": action})  # Use self.path!
+        params = urlencode({"filename": self.filename, "action": action})  # Use self.path!
         url = f"{base_url}file?{params}"
         return url

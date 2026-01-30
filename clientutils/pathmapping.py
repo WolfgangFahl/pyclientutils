@@ -210,6 +210,24 @@ class PathMapping:
 
         return target_path
 
+    def detect_os_type(self, filepath: str) -> OSType:
+        """
+        Detect OS type from filepath format.
+
+        Args:
+            filepath: Path to analyze
+
+        Returns:
+            Detected OSType
+        """
+        # Default is Linux/macOS/Unix style
+        ostype=OSType.LINUX
+        # Windows if drive letter present (e.g., C:, X:)
+        if len(filepath) >= 2 and filepath[1] == ':':
+            ostype=OSType.WINDOWS
+        return ostype
+
+
     def translate(self, filepath: str) -> str:
         """
         Translate path to current OS, auto-detecting source OS.
@@ -223,11 +241,25 @@ class PathMapping:
             Translated path for current OS
         """
         # Detect source OS: Windows if drive letter present, otherwise Linux
-        from_os = OSType.WINDOWS if len(filepath) >= 2 and filepath[1] == ':' else OSType.LINUX
+        from_os =self.detect_os_type(filepath)
 
         # Target is always current platform
         to_os = OSType.from_platform()
 
         target_path = self.translate_ospath(filepath, from_os, to_os)
         return target_path
+
+    def get_mapping_for_path(self, filepath: str) -> Optional[PathMapEntry]:
+        """
+        Get mapping entry for a filepath, auto-detecting the OS type.
+
+        Args:
+            filepath: Path to lookup
+
+        Returns:
+            Matching PathMapEntry or None
+        """
+        os_type = self.detect_os_type(filepath)
+        pme= self.get_mapping_by_path(filepath, os_type)
+        return pme
 
